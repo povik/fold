@@ -409,7 +409,7 @@ for 1 {
 }
 ```
 
-The code of our program in full is here (TODO). It properly synthesizes into a pipelined RISC-V core. All the while the code can still be compiled with the machine code compiler. Note that the block we have added for proper sequencing, which was
+[The code of our program in full is here](https://gist.github.com/povik/4ad96f11ee13864e606e4df09af95d69). It properly synthesizes into a pipelined RISC-V core. All the while the code can still be compiled with the machine code compiler. Note that the block we have added for proper sequencing, which was
 
 ```
 	if extra_delay1 == 1 {
@@ -501,4 +501,4 @@ restart:
 }
 ```
 
-Additionally, we need to disable side-effects when `flush1` equals 1: both writes to `wm` and writes to `regs` shouldn't be carried out when `flush1 == 1`. Since we are using a memory for these variables, the writes in the cancelled thread would spill over to the main thread, which would be in violation of the requirement for memory accesses to respect the program order and would cause our core to misbehave. Once we add those conditionals, that's it! Full code here (TODO).
+Additionally, we need to disable side-effects when `flush1` equals 1: both writes to `wm` and writes to `regs` shouldn't be carried out when `flush1 == 1`. Since we are using a memory for these variables, the writes in the cancelled thread would spill over to the main thread, which would be in violation of the requirement for memory accesses to respect the program order and would cause our core to misbehave. Once we add those conditionals, that's it! [Full code here](https://gist.github.com/povik/944813a70ea814f436cf13b3ee4eea46).
