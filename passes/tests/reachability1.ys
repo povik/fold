@@ -1,0 +1,24 @@
+# Test `seer_reachability` fully expands state space
+read_verilog <<EOF
+module top(crank);
+
+(* seer.background_value = 1'b0 *)
+input [0:0] crank;
+
+(* seer.background_value = 4'b0000 *)
+wire [3:0] j;
+
+wire [3:0] k = crank ? (j + 1'b1) : 0;
+
+SEER #(
+	.WIDTH(4),
+	.OFFSET(-1),
+) s1(.A(k), .Y(j));
+endmodule
+EOF
+
+read_verilog support/lib.v
+portal_check
+seer_spreadbg -writeback
+seer_reachability top
+# TODO

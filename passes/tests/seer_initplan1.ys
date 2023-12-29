@@ -1,0 +1,23 @@
+# Test `seer_initplan -select-offenders` selects whole of offending loops when there are connected wires involved
+
+read_verilog << EOF
+module top();
+  wire [1:0] a;
+  wire [1:0] b;
+  wire [1:0] c;
+  wire [1:0] d;
+
+  assign b = a;
+  assign c = ~b;
+  assign d = c;
+
+  SEER #(
+    .WIDTH(2),
+    .OFFSET(1),
+  ) s(.A(d), .Y(a));
+endmodule
+EOF
+
+read_verilog -sv support/lib.v
+seer_initplan -select_offenders
+select -module top -assert-none % %n

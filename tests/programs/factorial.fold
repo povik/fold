@@ -1,0 +1,22 @@
+func factorial(N [16]) [24] {
+	var i [16] mut, j [16] mut;
+	i = 0;
+	j = 1;
+	for (i < N) {
+		i = i + 1;
+		j = j * i;
+		delay(1);
+	}
+	ret = j;
+	delay(1);
+}
+
+var v [20] mut;
+
+` wait.
+v = factorial(5);
+assert_equal(v, 5*4*3*2*1);
+
+` wait.
+v = factorial(7);
+assert_equal(v, 7*6*5*4*3*2*1);

@@ -1,0 +1,68 @@
+# Test timeportal resolution with domain constraints
+
+read_verilog <<EOF
+(* blackbox *)
+module BLACKBOX (A, Y);
+parameter WIDTH = 0;
+input [WIDTH-1:0] A;
+input [WIDTH-1:0] Y;
+endmodule
+EOF
+
+read_verilog << EOF
+module top(clk, rst, ai, ao, bi, bo);
+  input clk;
+  input rst;
+  input [7:0] ai;
+  input [5:0] bi;
+  output [7:0] ao;
+  output [0:0] bo;
+
+  wire [7:0] a3, ao3, bb1i, bb1o;
+  wire [7:0] bb1i, bb1o;
+  SEER #(
+    .WIDTH(8),
+    .OFFSET(-3)
+  ) s1(.A(ai), .Y(a3));
+  SEER #(
+    .WIDTH(8),
+    .OFFSET(3)
+  ) s2(.A(ao3), .Y(ao));
+  BLACKBOX #(
+    .WIDTH(8),
+  ) bb1(.A(bb1i), .Y(bb1o));
+
+  (* timetravel_bank_a_domain="hello" *)
+  (* timetravel_bank_a_constraint="upper-bound" *)
+  TIMEPORTAL #(
+    .A_WIDTH(8),
+    .B_WIDTH(8),
+  ) tp1(.A(a3), .AY(bb1i), .B(bb1o), .BY(ao3));
+
+  wire [5:0] bi3;
+  wire [5:0] bb2i, bb2o;
+  wire [5:0] bo_unreduced;
+  BLACKBOX #(
+    .WIDTH(6),
+  ) bb2(.A(bb2i), .Y(bb2o));
+  (* timetravel_bank_a_domain="hello" *)
+  (* timetravel_bank_a_constraint="lower-bound" *)
+  TIMEPORTAL #(
+    .A_WIDTH(6),
+    .B_WIDTH(6)
+  ) tp2(.A(bi3), .AY(bb2i), .B(bb2o), .BY(bo_unreduced));
+  SEER #(
+    .WIDTH(6),
+    .OFFSET(-3)
+  ) s3(.A(bi), .Y(bi3));
+  assign bo = |bo_unreduced;
+endmodule
+EOF
+
+read_verilog -sv support/lib.v
+
+portal_check
+seer_initplan
+seer_resolve -mask_undef_mux
+seer_timetravel
+# TODO

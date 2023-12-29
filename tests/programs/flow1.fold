@@ -1,0 +1,19 @@
+var k [16] mut;
+var j [10] mut;
+
+func increment(amount [10])()
+{
+	j = j + amount;
+
+	delay(10);
+}
+
+j = 0;
+k = 1;
+` period 1.
+for k != 0x8000 {
+	increment(2);
+	k = k << 1;
+}
+
+assert_equal(j, 2 * 15);

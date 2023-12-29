@@ -1,0 +1,22 @@
+# Test spreading of background values
+read_verilog <<EOF
+module top();
+
+wire [1:0] j;
+(* seer.background_value = 2'b00 *)
+wire [1:0] k;
+(* seer.background_value = 2'b00 *)
+wire [1:0] t;
+
+SEER #(
+	.WIDTH(2),
+	.OFFSET(-1),
+) s1(.A(t), .Y(k));
+
+assign j = ~k;
+assign t = ~j;
+
+endmodule
+EOF
+
+seer_spreadbg -writeback

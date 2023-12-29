@@ -1,0 +1,16 @@
+# Test execid on immutable memory-backed variable
+read_fold <<EOF
+var a [4,16]; ` mem.
+a[0] = 5;
+` transp.
+print("%x\n", a[0]);
+delay(1);
+print("%x\n", a[0]);
+EOF
+
+fold_synth -execid
+read_verilog -sv support/mutex_assert.sv support/dummy_execid.sv
+hierarchy -top top
+proc
+memory_nordff
+sim -clock clk -reset rst -assert -n 5

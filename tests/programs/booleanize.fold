@@ -1,0 +1,22 @@
+` per_invocation.
+func twoway(v [3] signed) [3] signed {
+	var ret_ [3] signed mut;
+	ret_ = 0;
+	if v {
+		ret_ = 1;
+	} else {
+		ret_ = -1;
+	}
+	ret = ret_;
+}
+
+assert_equal(twoway(-1), 1);
+assert_equal(twoway(0), -1);
+assert_equal(twoway(1), 1);
+
+var k [3] mut;
+k = 5;
+` period 1.
+for k {
+	k = k - 1;
+}

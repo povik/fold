@@ -1,0 +1,37 @@
+# Test `seer_initplan` finds sensible initials
+
+read_verilog << EOF
+module top(a);
+  output wire [1:0] a;
+  wire [1:0] b;
+  wire [1:0] c;
+  wire [1:0] d;
+
+  SEER #(
+    .WIDTH(2),
+    .OFFSET(-1),
+  ) s1(.A(~a), .Y(b));
+
+  SEER #(
+    .WIDTH(2),
+    .OFFSET(4),
+  ) s2(.A(~b), .Y(c));
+
+  SEER #(
+    .WIDTH(2),
+    .OFFSET(-5),
+  ) s3(.A(~c), .Y(d));
+
+  SEER #(
+    .WIDTH(2),
+    .OFFSET(2),
+  ) s4(.A(~d), .Y(a));
+endmodule
+EOF
+
+read_verilog -sv support/lib.v
+seer_initplan
+seer_timetravel
+seer_merge
+opt_clean -purge
+seer_stat -assert-no-magic

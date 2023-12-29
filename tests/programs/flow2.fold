@@ -1,0 +1,20 @@
+var N [4] mut;
+var i [8] mut;
+var j [16] mut, ret [16] mut, expected [16] mut;
+
+N = 0;
+expected = 40320;
+for N < 9 {
+	i = 0;
+	j = 1;
+	` period 1.
+	for i < N {
+		i = i + 1;
+		j = j * i;
+		delay(1);
+	}
+	N = N + 1;
+	ret = j;
+	delay(1);
+}
+assert_equal(ret, expected);

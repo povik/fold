@@ -1,0 +1,4 @@
+var a [2,4]; ` mem.
+a[0] = 5;
+` transp.
+assert_equal(a[0], 5);

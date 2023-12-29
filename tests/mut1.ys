@@ -1,0 +1,24 @@
+# Test mutable variable construction
+read_fold <<EOF
+# At one point, this was causing the compiler
+# to leave used-but-undriven wires in the design
+func f(a [1]) () {}
+func g(b [1]) (ret [1]) {}
+
+var v [1] mut;
+var j [1] mut;
+` period 0.
+for 0 {
+	` wait.
+	f(!v);
+	v = g(0);
+	if 0 {
+	} else {
+		if 0 {
+			j = 1;
+		}
+	}
+}
+EOF
+
+fold_synth

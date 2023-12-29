@@ -1,0 +1,8 @@
+var a [2,4,16]; ` mem.
+a[0,0] = 5;
+delay(1);
+a[0,1] = 6;
+delay(1);
+assert_equal(a[0,0], 5);
+delay(1);
+assert_equal(a[0,1], 6);

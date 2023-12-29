@@ -1,0 +1,16 @@
+var pc [32] mut;
+
+func f() () {
+entry:
+	delay(1);
+	if __arbitrary() {
+		goto entry;
+	}
+}
+
+pc = __arbitrary(32);
+delay(1);
+if __arbitrary() {
+	f();
+}
+__requires(pc);

@@ -1,0 +1,27 @@
+# Test loop unroll
+read_fold <<EOF
+
+var j [8] mut;
+var k [8] mut;
+var q [8] mut;
+var s [8];
+
+j = 0; k = 0; q = 33; s = 44;
+
+` unroll 9.
+for j < 8 {
+	k = k + j;
+	j = j + 1;
+	delay(1);
+}
+
+assert_equal(k, 28);
+assert_equal(q, 33);
+assert_equal(s, 44);
+
+EOF
+read_verilog -sv support/lib.v
+scratchpad -get immutlinks
+fold_synth
+static_assert -always_passing -remove
+select -assert-none t:$assert

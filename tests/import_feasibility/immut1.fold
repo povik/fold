@@ -1,0 +1,10 @@
+var j [4];
+var i [4] mut;
+i = 0;
+` period 1.
+for i < 4 {
+	i = i + 1;
+}
+if __arbitrary() { j = 0xa; }
+if __arbitrary() { j = 0x5; }
+__requires(j);

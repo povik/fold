@@ -1,0 +1,11 @@
+func test() (a [8], b [8])
+{
+	a = 4;
+	b = 5;
+}
+
+var c [6], d [6];
+
+c, d = test();
+assert_equal(c, 4);
+assert_equal(d, 5);

@@ -1,0 +1,22 @@
+func test_var() () {
+	var test [8] mut; ` global
+	test = 1;
+	delay(1);
+	assert_equal(test, 1);
+	test = test + 1;
+	delay(1);
+	assert_equal(test, 2);
+}
+
+test_var();
+delay(2);
+test_var();
+
+func test2(
+	test [8] mut ` global
+)() {
+	delay(1);
+	assert_equal(test, 4);
+}
+
+test2(4);

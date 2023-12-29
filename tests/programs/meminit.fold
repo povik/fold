@@ -1,0 +1,18 @@
+var h [8,8]; ` mem.
+
+` meminit.
+h = {
+	42,
+	45,
+	43,
+	85,
+	34,
+	65,
+	33,
+	33
+};
+
+delay(2);
+assert_equal(h[3], 85);
+delay(1);
+assert_equal(h[7], 33);

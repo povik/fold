@@ -1,0 +1,83 @@
+const fixp = 32;
+const log2len = 8;
+const len = 8;
+
+func fetch_complex(
+	a [2, fixp] ` addr.
+) [2, fixp] {
+	var r [fixp], i [fixp];
+
+	r = a[0];
+	delay(1);
+	i = a[1];
+
+	ret = {r, i};
+}
+
+func pass(
+	no [fixp],
+	i [len, 2, fixp] ` addr. adims 2.
+)() {
+	var j [4] mut;
+	j = 0;
+
+	` period 4.
+	for j < len//2 {
+		assert_equal(fetch_complex(i[j]),
+					 {no << 8, no << 8});
+		delay(4);
+		assert_equal(fetch_complex(i[j + (len // 2)]),
+					 {no << 8, no << 8});
+		j = j + 1;
+	}
+}
+
+func entry()() {
+	var inp [len, 2, fixp]; ` mem.
+	var m [2, len, 2, fixp]; ` mem.
+
+	` meminit.
+	inp = {
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0}
+	};
+
+	` meminit.
+	m = {
+		{
+			{0, 0},
+			{0, 0},
+			{0, 0},
+			{0, 0},
+			{0, 0},
+			{0, 0},
+			{0, 0},
+			{0, 0}
+		},
+		{
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300},
+			{0x300, 0x300}
+		}
+	};
+
+	delay(2);
+	` wait.
+	pass(0, inp);
+	delay(1);
+	` wait.
+	pass(0x3, m[1]);
+}
+
+entry();

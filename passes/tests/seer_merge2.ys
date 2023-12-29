@@ -1,0 +1,29 @@
+# Test `seer_merge` removes seers that cancel out
+read_verilog << EOF
+module top(input clk, input rst, input [7:0] a, output [7:0] b);
+  wire [7:0] c;
+  wire [7:0] d;
+  SEER #(
+  	.WIDTH(8),
+  	.OFFSET(10)
+  ) m1(.A(a), .Y(c));
+  SEER #(
+  	.WIDTH(4),
+  	.OFFSET(-3)
+  ) m21(.A(c[3:0]), .Y(d[3:0]));
+  SEER #(
+    .WIDTH(4),
+    .OFFSET(-3)
+  ) m22(.A(c[7:4]), .Y(d[7:4]));
+  SEER #(
+  	.WIDTH(8),
+  	.OFFSET(-7)
+  ) m3(.A(d), .Y(b));
+endmodule
+EOF
+
+read_verilog -sv support/lib.v
+seer_merge
+clean -purge
+select -assert-none t:SEER
+sat -prove b a -verify

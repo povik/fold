@@ -1,0 +1,6 @@
+var a [8];
+a = 0x93;
+
+assert_equal(a[7..4], 0x9);
+assert_equal(a[4], 1);
+assert_equal(a[5], 0);

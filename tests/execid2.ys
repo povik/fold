@@ -1,0 +1,21 @@
+# Test execid on mutable memory-backed variable
+read_fold <<EOF
+var a [4,16] mut; ` mem.
+a[0] = 5;
+` transp.
+assert_equal(a[0], 5);
+delay(1);
+assert_equal(a[0], 5);
+a[0] = 6;
+` transp.
+assert_equal(a[0], 6);
+delay(1);
+assert_equal(a[0], 6);
+EOF
+
+fold_synth -execid
+read_verilog -sv support/mutex_assert.sv support/dummy_execid.sv
+hierarchy -top top
+proc
+memory_nordff
+sim -clock clk -reset rst -assert -n 5

@@ -1,0 +1,21 @@
+# Test `seer_resolve`'s cost model handles duplicated seer bits
+read_verilog << EOF
+module top(input clk, input rst, input a, output [1:0] b);
+  wire c;
+  SEER #(
+  	.WIDTH(1),
+  	.OFFSET(-5)
+  ) m1(.A(a), .Y(c));
+  SEER #(
+  	.WIDTH(2),
+  	.OFFSET(-5)
+  ) m2(.A(~{c, c}), .Y(b));
+endmodule
+EOF
+
+read_verilog -sv support/lib.v
+seer_resolve
+seer_timetravel
+seer_merge
+clean -purge
+seer_stat -assert-max 10

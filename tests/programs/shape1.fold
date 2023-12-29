@@ -1,0 +1,11 @@
+var a [5,10] mut;
+a = {0xaa, 0xaa, 0xaa, 0xaa, 0xff};
+a[0] = 1;
+a[1] = 3;
+a[2] = 7;
+a[3] = 11;
+assert_equal(a[0], 1);
+assert_equal(a[1], 3);
+assert_equal(a[2], 7);
+assert_equal(a[3], 11);
+assert_equal(a[4], 0xff);

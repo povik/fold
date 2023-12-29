@@ -1,0 +1,23 @@
+const fixp = 16;
+
+func mult(a [fixp] signed, b [fixp] signed) [fixp] signed {
+	ret = (a*b) >> (fixp//2);
+}
+
+func cmult(a [2,fixp], b [2,fixp]) [2, fixp] signed {
+	var rr [fixp] signed, ri [fixp] signed;
+	var ir [fixp] signed, ii [fixp] signed;
+
+	rr = mult(a[0], b[0]);
+	delay(1);
+	ri = mult(a[0], b[1]);
+	delay(1);
+	ir = mult(a[1], b[0]);
+	delay(1);
+	ii = mult(a[1], b[1]);
+
+	ret = {rr - ii, ii};
+}
+
+assert_equal(cmult({0x100, 0x200}, {0x300, 0x400}),
+			 {-0x500, 0x800});

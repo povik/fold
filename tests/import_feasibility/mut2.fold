@@ -1,0 +1,21 @@
+func f(a [32], w [2]) [32] {
+	__requires(a); __requires(w);
+	ret = __arbitrary(32);
+}
+
+var pc [32] mut;
+pc = __arbitrary(32);
+
+` period 1.
+for 1 {
+	var i [32];
+	i = f(pc, 2);
+	pc = pc + 4;
+	var r [32];
+	var a [32];
+	a = __arbitrary(32);
+	delay(1);
+	if __arbitrary() { r = f(a, 1); }
+	if __arbitrary() { r = f(a, 0); }
+	__requires(r);
+}
