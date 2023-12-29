@@ -50,7 +50,7 @@ To simulate the program, supplying implementations for the `MUTEX_ASSERT` debugg
 
 ### Flow with full instrumentation
 
-There's optional "ExecID" instrumentation that needs to be enabled for checking that the memory accesses in logic implementation respect program order. This "ExecID" instrumentation has the form of a circuit of cells with types which are prefixed with `EXECID_`. As of now these cells don't have an implementation apart from a very limited one. If you run into one of the limitations the cells trigger a failed assert.
+There's optional "ExecID" instrumentation that needs to be enabled for checking that the memory accesses in logic implementation [respect program order](docs/QuickStart.md#req-programorder). This "ExecID" instrumentation has the form of a circuit of cells with types which are prefixed with `EXECID_`. As of now these cells don't have an implementation apart from a very limited one. If you run into one of the limitations the cells trigger a failed assert.
 
 Even this limited implementation serves to demonstrate the principle, and is a placeholder for a full-fledged implementation in the future.
 
