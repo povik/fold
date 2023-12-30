@@ -1058,10 +1058,13 @@ struct ImportsPass : Pass {
 			for (auto cell : import_cells) {
 				int width = cell->getParam(ID::WIDTH).as_int();
 				Namespace ns = cell_namespace(cell);
-				std::string varname = cell->name.str();
 				bool zeroed = cell->getParam(ID(ZEROED)).as_bool();
 				Immutnode *import_from = cell_immutnode(cell, links, ID(FROM_NODE));
 				Immutnode *import_to = cell_immutnode(cell, links, ID(TO_NODE));
+
+				std::string varname = cell->name.str();
+				if (cell->attributes.count(ID(implements_variable)))
+					varname = cell->attributes[ID(implements_variable)].decode_string();
 
 				std::string stalk = cell->getParam(ID(STALK)).decode_string();
 

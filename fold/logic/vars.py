@@ -267,16 +267,17 @@ class VarImplMutable(VarImpl):
 
         assert upstream_sig.width == self.shape.bitlen
         bridged = self.m.add_wire(f"\\{self.varname}", self.shape.bitlen)
-        self.m.add_cell("\\IMPORT",
-            ("\\D", upstream_sig),
-            ("\\Q", bridged),
-            WIDTH=bridged.width,
-            ZEROED=False,
-            NAMESPACE=self.f.namespace,
-            FROM_NODE=escape_id(edge.tail.label),
-            TO_NODE=escape_id(edge.head.label),
-            STALK=escape_stalk(edge.stalk),
-        )
+        with rtl.SynthAttrContext(implements_variable=self.varname):
+            self.m.add_cell("\\IMPORT",
+                ("\\D", upstream_sig),
+                ("\\Q", bridged),
+                WIDTH=bridged.width,
+                ZEROED=False,
+                NAMESPACE=self.f.namespace,
+                FROM_NODE=escape_id(edge.tail.label),
+                TO_NODE=escape_id(edge.head.label),
+                STALK=escape_stalk(edge.stalk),
+            )
         return edge.hot, bridged
 
     def _build_mux(self, bi):
@@ -463,16 +464,17 @@ class VarImplMutable(VarImpl):
             print(f"Simple import: {gc} from {curr[0]} to {bi}")
 
         bridged = self.m.add_wire(f"\\{self.varname}", self.shape.bitlen)
-        self.m.add_cell("\\IMPORT",
-            ("\\D", sig),
-            ("\\Q", bridged),
-            WIDTH=bridged.width,
-            ZEROED=False,
-            NAMESPACE=self.f.namespace,
-            FROM_NODE=escape_id(curr[0].label),
-            TO_NODE=escape_id(bi.label),
-            STALK=escape_stalk(gc),
-        )
+        with rtl.SynthAttrContext(implements_variable=self.varname):
+            self.m.add_cell("\\IMPORT",
+                ("\\D", sig),
+                ("\\Q", bridged),
+                WIDTH=bridged.width,
+                ZEROED=False,
+                NAMESPACE=self.f.namespace,
+                FROM_NODE=escape_id(curr[0].label),
+                TO_NODE=escape_id(bi.label),
+                STALK=escape_stalk(gc),
+            )
         hot = rtl.OR(self.m, *[edge.hot for edge in self.f.mutlinks.walk_heads(bi)])
         return bridged, hot
 
