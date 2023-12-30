@@ -285,7 +285,10 @@ class VarImplMutable(VarImpl):
             self._mux_import(inward)
             for inward in self.f.mutlinks.walk_heads(bi)
         ]
-        return rtl.build_mux(self.m, cases, width=self.shape.bitlen)
+        src = f"forwarding variable '{self.varname}'" \
+              + (f" at {markers_str(bi.markers)}" if markers_str(bi.markers) != "" else "")
+        with rtl.SynthAttrContext(src=src):
+            return rtl.build_mux(self.m, cases, width=self.shape.bitlen)
 
     @graphtools.early_return
     def _import(self, bi):
