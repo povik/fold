@@ -35,10 +35,14 @@ class BlockImpl:
         return self.frame
 
     @property
+    def src(self):
+    	return markers_str(self.markers)
+
+    @property
     def label(self):
         prefix = self.f.namespace.replace(" ", ".")
         return prefix + "." + \
-            (self._label.replace(" ", "") or (markers_str(self.markers).replace(" ", "") if (self.markers is not None) else "unk"))
+            (self._label.replace(" ", "") or (self.src.replace(" ", "") if self.src != "" else "unk"))
 
     def __repr__(self):
         return "<blockimpl %s>" % self.label
@@ -1219,8 +1223,8 @@ class Design:
             d += f"\tns {' '.join(namespaces[node] + [''])}end\n"
             assert isinstance(node.en, rtl.Wire)
             d += f"\ten {escape_id(node.en.name)} end\n"
-            if markers_str(node.markers) != "":
-                d += f"\tsrc '{markers_str(node.markers)}'\n"
+            if node.src != "":
+                d += f"\tsrc '{node.src}'\n"
             d += f"end\n"
         for edge in self.top_frame.immutlinks.edges:
             d += f"edge {escape_id(edge.ep1.label)} {escape_id(edge.ep2.label)}\n"
