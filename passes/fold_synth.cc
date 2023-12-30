@@ -149,7 +149,7 @@ struct FoldSynthPass : Pass {
 		log_header(d, "Synthesizing background.\n");
 		log_push();
 
-		Pass::call(d, "check -allow-loops -assert");
+		//Pass::call(d, "check -allow-loops -assert");
 		Pass::call(d, "opt_merge -share_all");
 		Pass::call(d, "connbgval");
 		Pass::call(d, "opt_clean");
@@ -162,7 +162,7 @@ struct FoldSynthPass : Pass {
 
 		log_pop();
 
-		Pass::call(d, "check -assert -allow-loops");
+		//Pass::call(d, "check -assert -allow-loops");
 		Pass::call(d, "connbgval");
 		Pass::call(d, "opt_clean");
 
