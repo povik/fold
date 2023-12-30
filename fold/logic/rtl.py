@@ -6,11 +6,12 @@ try:
     # running under yosys process
     import libyosys as ys
 except ImportError:
-    # running outside yosys process
-    from fold_pyosys import libyosys as ys
-except ImportError:
-    # running outside yosys process
-    from pyosys import libyosys as ys
+    try:
+        # running outside yosys process
+        from fold_pyosys import libyosys as ys
+    except ImportError:
+        # running outside yosys process
+        from pyosys import libyosys as ys
 from enum import Enum
 import unittest
 import sys
