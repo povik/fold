@@ -154,7 +154,7 @@ struct timetravel_node {
 		auto attrval = cell->get_string_attribute(attrname);
 		try {
 			return std::stoi(attrval);
-		} catch (std::invalid_argument) {
+		} catch (std::invalid_argument const&) {
 			log_error("Bad %s attribute on %s: %s\n",
 						log_id(attrname), log_id(name()), attrval.c_str());
 		}
@@ -173,7 +173,7 @@ struct timetravel_node {
 		auto attrval = cell->get_string_attribute(attrname);
 		try {
 			return std::stoi(attrval);
-		} catch (std::invalid_argument) {
+		} catch (std::invalid_argument const&) {
 			log_error("Bad %s attribute on %s: %s\n",
 						log_id(attrname), log_id(name()), attrval.c_str());
 		}

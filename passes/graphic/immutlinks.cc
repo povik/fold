@@ -2,6 +2,9 @@
 // Copyright 2023 Martin Povišer <povik@cutebit.org>
 // Distributed under the terms of the ISC license, see LICENSE
 
+#include <iomanip>
+#include <iostream>
+
 #include "kernel/rtlil.h"
 #include "kernel/sigtools.h"
 

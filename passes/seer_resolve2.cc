@@ -73,8 +73,8 @@ typedef constraint* redge;
 
 // exit the namespace to specialize hash_ops
 };
-template<> struct ::Yosys::hashlib::hash_ops<resolve2::rnode> : ::Yosys::hashlib::hash_ptr_ops {};
-template<> struct ::Yosys::hashlib::hash_ops<resolve2::redge> : ::Yosys::hashlib::hash_ptr_ops {};
+template<> struct Yosys::hashlib::hash_ops<resolve2::rnode> : ::Yosys::hashlib::hash_ptr_ops {};
+template<> struct Yosys::hashlib::hash_ops<resolve2::redge> : ::Yosys::hashlib::hash_ptr_ops {};
 namespace resolve2 {
 // we are back
 
@@ -580,14 +580,14 @@ struct optimize_worker {
 			auto n = rnet_node(us);
 
 			struct rnode_w_offset {
-				rnode rnode;
+				rnode rn;
 				int off;
 
 				int hash() const {
-					return ((uintptr_t) rnode) + off;
+					return ((uintptr_t) rn) + off;
 				}
 				bool operator==(rnode_w_offset other) const {
-					return rnode == other.rnode && off == other.off;
+					return rn == other.rn && off == other.off;
 				}
 			};
 
@@ -630,7 +630,7 @@ struct optimize_worker {
 			case 1: // single consumer
 				{
 					auto cn = *(pair.first.begin());
-					rnet.add_edge(cn.rnode, n, pair.second, cn.off);
+					rnet.add_edge(cn.rn, n, pair.second, cn.off);
 				}
 				break;
 			default: // multiple consumers
@@ -638,8 +638,8 @@ struct optimize_worker {
 					auto aux = rnet.add_node();
 					aux->label = "\\aux_" + us.name().str();
 					for (auto cn : pair.first) {
-						rnet.add_edge(cn.rnode, n, 0, cn.off); // data edge
-						rnet.add_edge(aux, cn.rnode, 0, -cn.off);
+						rnet.add_edge(cn.rn, n, 0, cn.off); // data edge
+						rnet.add_edge(aux, cn.rn, 0, -cn.off);
 					}
 					rnet.add_edge(aux, n, pair.second, 0);
 					assign_minimum(aux);		

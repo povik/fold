@@ -46,7 +46,7 @@ typedef edge redge;
 
 };
 
-template<> struct ::Yosys::hashlib::hash_ops<resolve::rnode> : ::Yosys::hashlib::hash_ptr_ops {};
+template<> struct Yosys::hashlib::hash_ops<resolve::rnode> : ::Yosys::hashlib::hash_ptr_ops {};
 
 namespace resolve {
 
@@ -245,7 +245,8 @@ struct resolvnet {
 			.base = from,
 			.endpoint = to,
 			.cost = cost,
-			.offset = offset
+			.offset = offset,
+			.lagr = 0
 		});
 	}
 };
@@ -264,6 +265,9 @@ struct merge_saturated_components {
 
 	int index = 0;
 	int ndomains = 0;
+
+	merge_saturated_components(resolvnet &rnet)
+		: rnet(rnet) {}
 
 	void descend(rnode node)
 	{
@@ -638,6 +642,9 @@ struct order_sccs_worker {
 	int index = 0;
 	int sccs = 0;
 
+	order_sccs_worker(resolvnet &rnet, rnode pivot)
+		: rnet(rnet), pivot(pivot) {}
+
 	void descend(rnode node)
 	{
 		labels[node] = indices{ index, index };
@@ -730,9 +737,7 @@ struct order_sccs_worker {
 
 std::vector<pool<rnode>> order_sccs(resolvnet &rnet, rnode pivot)
 {
-	order_sccs_worker worker{ .rnet = rnet, .pivot = pivot };
-	worker.rnet = rnet;
-	worker.pivot = pivot;
+	order_sccs_worker worker(rnet, pivot);
 	worker.run();
 	return worker.ordered_scc_list;
 }
@@ -811,14 +816,14 @@ struct optimize_worker {
 			auto n = rnet_node(us);
 
 			struct rnode_w_offset {
-				rnode rnode;
+				rnode rn;
 				int off;
 
 				int hash() const {
-					return ((uintptr_t) rnode) + off;
+					return ((uintptr_t) rn) + off;
 				}
 				bool operator==(rnode_w_offset other) const {
-					return rnode == other.rnode && off == other.off;
+					return rn == other.rn && off == other.off;
 				}
 			};
 
@@ -861,7 +866,7 @@ struct optimize_worker {
 			case 1: // single consumer
 				{
 					auto cn = *(pair.first.begin());
-					rnet.add_edge(cn.rnode, n, pair.second, cn.off);
+					rnet.add_edge(cn.rn, n, pair.second, cn.off);
 				}
 				break;
 			default: // multiple consumers
@@ -869,8 +874,8 @@ struct optimize_worker {
 					auto aux = rnet.add_node();
 					aux->label = "\\aux_" + us.name().str();
 					for (auto cn : pair.first) {
-						rnet.add_edge(cn.rnode, n, 0, cn.off); // data edge
-						rnet.add_edge(aux, cn.rnode, 0, -cn.off);
+						rnet.add_edge(cn.rn, n, 0, cn.off); // data edge
+						rnet.add_edge(aux, cn.rn, 0, -cn.off);
 					}
 					rnet.add_edge(aux, n, pair.second, 0);
 					assign_minimum(aux);
@@ -906,7 +911,7 @@ struct optimize_worker {
 		log("Have %zu nodes, cost sum %d.\n", rnet.nodes.size(), costsum(rnet));
 
 		log("Merging saturated components...\n");
-		merge_saturated_components merge_saturated{ .rnet = rnet };
+		merge_saturated_components merge_saturated(rnet);
 		merge_saturated.run();
 
 		log("Have %zu nodes, cost sum %d.\n", rnet.nodes.size(), costsum(rnet));

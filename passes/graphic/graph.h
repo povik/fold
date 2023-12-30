@@ -116,7 +116,7 @@ struct Immutnode : Namespaced {
 		: id(id) {};
 };
 
-template<> struct ::hashlib::hash_ops<Immutnode*> : ::Yosys::hashlib::hash_ptr_ops {};
+template<> struct hashlib::hash_ops<Immutnode*> : ::Yosys::hashlib::hash_ptr_ops {};
 
 struct Element {
 	std::string label = "";
