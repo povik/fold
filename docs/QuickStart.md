@@ -84,8 +84,8 @@ pc = 0;
 for 1 {
 	var i [32], opcode [7], pc_sample [32];
 	i = memio(pc, undef, undef, 0);
-	pc_sample = pc;   
-	pc = pc_sample + 4;
+	pc_sample = pc;
+	pc = pc + 4;
 
 	var opcode [7];
 	opcode = i[6..0];
@@ -236,8 +236,8 @@ for 1 {
 	var i [32], opcode [7], pc_sample [32];
 	i = memio(pc, undef, undef, 0);
 	delay(1);
-	pc_sample = pc;   
-	pc = pc_sample + 4;
+	pc_sample = pc;
+	pc = pc + 4;
 
 	# instruction decoding
 	...
@@ -363,7 +363,7 @@ extra_delay1 = 0;
 for 1 {
 	... (contains memio call)
 
-	if extra_delay1 == 1 {
+	if extra_delay1 {
 		delay(1);
 	}
 	extra_delay1 = 0;
@@ -416,7 +416,7 @@ for 1 {
 [The code of our program in full is here](https://gist.github.com/povik/4ad96f11ee13864e606e4df09af95d69). It properly synthesizes into a pipelined RISC-V core. All the while the code can still be compiled with the machine code compiler. Note that the block we have added for proper sequencing, which was
 
 ```
-	if extra_delay1 == 1 {
+	if extra_delay1 {
 		delay(1);
 	}
 ```

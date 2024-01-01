@@ -143,7 +143,7 @@ sed -i "s/} else if opcode == JALR {/\tdelay(2);\n\t} else if opcode == JALR {/"
 sed -i "s/} else if opcode == OP || opcode == OP_IMM {/\tdelay(2);\n\t} else if opcode == OP || opcode == OP_IMM {/" $wd/4.fold
 sed -i "s/if cond { pc = pc_sample + imm_b; }/if cond { pc = pc_sample + imm_b; }\n\t\tdelay(2);/" $wd/4.fold
 sed -i "s/delay(1); # end-of-loop delay/delay(-1); # end-of-loop delay/" $wd/4.fold
-sed -i "s/# TODO: fetch operands from registers/if extra_delay1 == 1 {\n\t\tdelay(1);\n\t}\n\textra_delay1 = 0;\n\t# TODO: fetch operands from registers/" $wd/4.fold
+sed -i "s/# TODO: fetch operands from registers/if extra_delay1 {\n\t\tdelay(1);\n\t}\n\textra_delay1 = 0;\n\t# TODO: fetch operands from registers/" $wd/4.fold
 sed -i "s/pc = 0;/pc = 0;\nvar extra_delay1 [1] mut;\nextra_delay1 = 0;/" $wd/4.fold
 sed -i "s/r1 = regs\[rs1\];/\` transp.\n\tr1 = regs[rs1];/" $wd/4.fold
 sed -i "s/r2 = (opcode != OP_IMM) ? regs\[rs2\] : imm_i;/\` transp.\n\tr2 = (opcode != OP_IMM) ? regs[rs2] : imm_i;/" $wd/4.fold
