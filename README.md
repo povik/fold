@@ -46,7 +46,7 @@ To build a Fold program `sample.fold` into an RTLIL netlist `sample.il`:
 
 To simulate the program, supplying implementations for the `MUTEX_ASSERT` debugging cells that will be part of the netlist:
 
-	yosys -p "read_rtlil sample.il; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; sim -clock clk -reset rst"
+	yosys -p "read_rtlil sample.il; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -clock clk -reset rst"
 
 ### Flow with full instrumentation
 
@@ -60,7 +60,7 @@ To build a Fold program `sample.fold` into an RTLIL netlist `sample.il` includin
 
 To simulate the program, supplying implementations for the `MUTEX_ASSERT` debugging cells that will be part of the netlist, and also supplying a limited implementation for the ExecID cells:
 
-	yosys -p "read_rtlil sample.il; read_verilog -sv support/mutex_assert.sv support/dummy_execid.sv; hierarchy -top top; proc; sim -clock clk -reset rst"
+	yosys -p "read_rtlil sample.il; read_verilog -sv support/mutex_assert.sv support/dummy_execid.sv; hierarchy -top top; proc; memory_nordff; sim -clock clk -reset rst"
 
 ## License
 
