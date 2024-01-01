@@ -62,6 +62,18 @@ test: build/fold.so
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
 	done
+	@echo "Target: frontend constant evaluator"
+	@for testcase in tests/programs/ops*.fold; \
+	do \
+		echo -n "$${testcase}... "; \
+		if ! python3 -m fold.eval $${testcase} 1>/dev/null 2>&1; then \
+			echo -e "\e[31mFAIL\e[0m"; \
+			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
+			python3 -m fold.eval $${testcase}; \
+		else \
+			echo -e "\e[32mOK\e[0m"; \
+		fi \
+	done
 
 COVERAGE_ARGS = --rcfile=coverage.rc --branch --append --data-file build/python.coverage
 frontend_coverage:
