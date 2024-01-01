@@ -773,11 +773,8 @@ struct optimize_worker {
 		if (!domain_nodes.count(label)) {
 			auto node = rnet.add_node();
 			node->label = label;
-			// TODO: fix-up in case of unconstrained domains,
-			//		 as we cannot save domain's assign like we
-			//		 can store other assigns
-			node->assign = std::numeric_limits<int>::min();
 			domain_nodes[label] = node;
+			// Assign of domain nodes gets set later
 			return node;
 		}
 		return domain_nodes[label];
