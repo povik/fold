@@ -160,21 +160,26 @@ struct InitplanWorker {
 		}
 	}
 
+	void log_node_insatiable(timetravel_node node)
+	{
+		if (node.cell) {
+			std::string src;
+			if (node.cell->has_attribute(ID::src))
+				src += "at " + node.cell->get_src_attribute();
+			log("\tNode: %s (type %s) %s\n", log_id(node.name()), log_id(node.cell->type), src.c_str());
+		} else {
+			log("\tNode: %s\n", log_id(node.name()));
+		}
+		if (node.cell)
+			to_select.insert(node.cell->name);
+	}
+
 	bool plan_push(timetravel_node node)
 	{
 		if (node == initiator) {
 			/* Uh oh */
 			log("Insatiable cycle detected:\n");
-			if (node.cell) {
-				std::string src;
-				if (node.cell->has_attribute(ID::src))
-					src += "at " + node.cell->get_src_attribute();
-				log("\tNode: %s (type %s) %s\n", log_id(node.name()), log_id(node.cell->type), src.c_str());
-			} else {
-				log("\tNode: %s\n", log_id(node.name()));
-			}
-			if (node.cell)
-				to_select.insert(node.cell->name);
+			log_node_insatiable(node);
 			return false;
 		}
 
@@ -206,16 +211,7 @@ struct InitplanWorker {
 				log("\t  %s[%d] --[ %d ]--> %s[%d]\n",
 					log_id(driver.port.label), driver.port.offset,
 					upstream.offset, log_id(port.label), port.offset);
-				if (node.cell) {
-					std::string src;
-					if (node.cell->has_attribute(ID::src))
-						src += "at " + node.cell->get_src_attribute();
-					log("\tNode: %s (type %s) %s\n", log_id(node.name()), log_id(node.cell->type), src.c_str());
-				} else {
-					log("\tNode: %s\n", log_id(node.name()));
-				}
-				if (node.cell)
-					to_select.insert(node.cell->name);
+				log_node_insatiable(node);
 				select_bitpath(node, port);
 				bad = true;
 			}
@@ -225,25 +221,15 @@ struct InitplanWorker {
 		for (auto dnode : domain_push[node.timetravel_domain()])
 		if (!plan_push(dnode)) {
 			log("\t  (domain %s)\n", log_id(node.timetravel_domain()));
-			if (node.cell) {
-				std::string src;
-				if (node.cell->has_attribute(ID::src))
-					src += "at " + node.cell->get_src_attribute();
-				log("\tNode: %s (type %s) %s\n", log_id(node.name()), log_id(node.cell->type), src.c_str());
-			} else {
-				log("\tNode: %s\n", log_id(node.name()));
-			}
-			if (node.cell)
-				to_select.insert(node.cell->name);
+			log_node_insatiable(node);
 			bad = true;
 		}
 
 		if (node.is_backedge() && node.bank == ID::A \
 				&& assigns[node.partner()] >= assigns[node])
 		if (!plan_push(node.partner())) {
-			log("\t  (backedge)\n"); // TODO: sort out prints
-			log("\tNode: %s (type BACKEDGE)\n", log_id(node.name()));
-			to_select.insert(node.cell->name);
+			log("\t  (backedge)\n");
+			log_node_insatiable(node);
 			bad = true;
 		}
 
@@ -295,7 +281,7 @@ struct InitplanWorker {
 					log("\t  %s[%d] --[ %d ]--> %s[%d]\n",
 						log_id(driver.port.label), driver.port.offset,
 						upstream.offset, log_id(port.label), port.offset);
-					log("\tNode: %s\n", log_id(node.name()));
+					log_node_insatiable(node);
 					select_bitpath(node, port);
 					bad = true;
 				}
