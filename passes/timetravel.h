@@ -80,14 +80,6 @@ struct timetravel_node {
 		else
 			return ID(timetravel_bank_b_constraint);
 	}
-	IdString attrname_scc() {
-		if (!is_timeportal() && !is_backedge())
-			return ID(timetravel_scc);
-		else if (bank == ID::A)
-			return ID(timetravel_bank_a_scc);
-		else
-			return ID(timetravel_bank_b_scc);
-	}
 	IdString attrname_timetravel() {
 		if (!is_timeportal() && !is_backedge())
 			return ID(timetravel);
@@ -141,23 +133,6 @@ struct timetravel_node {
 			return cell->name;
 		else
 			return ID(perimeter);
-	}
-	void set_scc_attribute(Module *m YS_MAYBE_UNUSED, std::string v) {
-		if (!cell) return;
-		cell->set_string_attribute(attrname_scc(), v);
-	}
-	int get_scc_attribute(Module *m YS_MAYBE_UNUSED) {
-		assert(cell); // TODO
-		auto attrname = attrname_scc();
-		if (!cell->has_attribute(attrname))
-			log_error("No %s attribute on %s.\n", log_id(attrname), log_id(name()));
-		auto attrval = cell->get_string_attribute(attrname);
-		try {
-			return std::stoi(attrval);
-		} catch (std::invalid_argument const&) {
-			log_error("Bad %s attribute on %s: %s\n",
-						log_id(attrname), log_id(name()), attrval.c_str());
-		}
 	}
 	void set_timetravel_attribute(int v) {
 		if (!cell) {
