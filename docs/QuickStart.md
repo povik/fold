@@ -55,7 +55,7 @@ var wm [128, 4, 8] mut;
 
 We made the variable three-dimensional. The first dimension corresponds to the words, the second dimension to the bytes in a word, and the last dimension to the bits of a byte. The variable is named `wm` and we are signifying, with the `mut` keyword, that it's mutable. If it wasn't, each memory cell could only ever be assigned a single value for the duration of the program's execution. (If the variable was defined at other than the top scope, the immutability restriction would apply for execution *within that scope*, not for the entirety of the program's execution.)
 
-Now we write a function to access the working memory. We will have a single function to carry out both reads and writes. We are writing it this way because it will help with mapping to hardware primitives later on once we are compiling to digital logic.
+Now we write a function to access working memory. We will have a single function to carry out both reads and writes. We are writing it this way because it will help with mapping to hardware primitives later on once we are compiling to digital logic.
 
 ```
 func memio(addr [32], wdata [32], be [4], we [1]) (rdata [32])
@@ -74,7 +74,7 @@ func memio(addr [32], wdata [32], be [4], we [1]) (rdata [32])
 
 In the function, we can access the `wm` variable from above since it was declared at the top scope, so the variable is visible within the function (and any other function). The function has a single return value represented by the variable `rdata` to which we assign in the function body if we are doing reads (argument `we` being zero). Function's arguments and return values are both held in implicit immutable variables tied to the function's scope.
 
-Now let's write the main loop interpreting the RISC-V instructions. First we define the register file (`regs`) and program counter (`pc`), then in a loop we fetch the instruction at the memory position pointed to by the program counter, and we decode some fields out of the instruction.
+Now let's start writing the main loop interpreting the RISC-V instructions. First we define the register file (`regs`) and program counter (`pc`), then in the body of an infinite loop we fetch the instruction at the memory position pointed to by the program counter, and we decode some fields out of the instruction.
 
 ```
 var regs [16, 32] mut;
@@ -108,11 +108,11 @@ for 1 {
 
 ```
 
-Here there's only a few noteworthy points. We are passing `undef` as a value for the second and third argument of `memio`. This represents an undefined value, which we are free to pass in since for reads those arguments are ignored, and passing in undefined values can be an opportunity for the logic compiler to better optimize the resulting netlist. For a reference on the instruction fields we are decoding in the code here, refer to Figure 2.3 of the RISC-V [Unpriviliged Specification](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf), page 16.
+Here there's only a few noteworthy points. We are passing `undef` as a value for the second and third argument of `memio`. This represents an undefined value, which we are free to pass in since for reads the arguments are ignored, and which we want to pass in should it help the logic compiler with optimization. For a reference on the instruction fields we are decoding in the code here, refer to Figure 2.3 of the RISC-V [Unpriviliged Specification](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf), page 16.
 
 Notice that we have a `print` statement in the code printing out the program counter and the instruction we fetched out of working memory. This will be preserved through to the netlist once we are compiling to digital logic (it will be expressed through special `$print` cell of RTLIL).
 
-We have fetched and decoded the instruction. Now we want to source the operands from the register file. We write the following code:
+We have fetched and decoded the instruction. Now we want to fetch the register operands. We write the following code:
 
 ```
 	var r1 [32], r2 [32], r1s [32] signed, r2s [32] signed;
@@ -121,7 +121,7 @@ We have fetched and decoded the instruction. Now we want to source the operands 
 	r1s = r1; r2s = r2;
 ```
 
-We read the registers indexed by the `rs1` and `rs2` fields of the instruction to obtain the first and the second data operand respectively. We special-case the `OP_IMM` opcode and take the second operand directly from the `imm_i` field instead. We are assigning the same operand data to `r1s` and `r2s` for reinterpretation. Assignment to variables and passing in of function arguments are the only basic operations in Fold programs which can overflow. The overflow semantics are defined, and here we make use of them to reinterpret the same data as signed integers. From now on whenever we wish to operate with the operands, we can use `r1` and `r2` as their unsigned integer interpretation, and `r2s` and `r2s` as their signed interpretation.
+We read the registers selected by the `rs1` and `rs2` fields of the instruction to obtain the first and second operand respectively. We special-case the `OP_IMM` opcode for which we take the second operand from the decoded `imm_i` field instead. We are assigning the same operand data to `r1s` and `r2s` for reinterpretation. Assignment to variables and passing in of function arguments are the only basic operations in Fold programs which can overflow. The overflow semantics are defined, and here we make use of them to reinterpret the operand data as signed integers. From now on whenever we wish to use the operands, we can use `r1` and `r2` for their unsigned interpretation, and `r2s` and `r2s` for their signed interpretation.
 
 Next we define a helper `wb` function to write a result of an operation back to the register file.
 
@@ -191,9 +191,9 @@ We move on to the execution of the actual operation encoded in an instruction, w
 	}
 ```
 
-Here we mechanically follow what the specification says. To simplify things for us a bit, we don't distinguish between instructions we are free to ignore (e.g. `FENCE`) and invalid instructions. We also assume all memory accesses are aligned to a boundary of the data unit they are accessing (bytes, halfwords, words).
+Here we mechanically follow what the specification says. To simplify things for us a bit, we don't distinguish between instructions we are free to ignore (e.g. `FENCE`) and instructions which are invalid. We also assume all memory accesses are aligned to a boundary of the data unit they are accessing (bytes, halfwords, words).
 
-If we put all the pieces together and compile the code with the machine code compiler, we obtain a minimal RISC-V instruction emulator supporting the unpriviliged RV32E ISA. We are only missing to initialize the working memory with an actual image of a RISC-V program. We can do that at the top of the Fold program with
+If we put all the pieces together and compile the code with the machine code compiler, we obtain a minimal RISC-V instruction emulator supporting the unpriviliged RV32E ISA. We are only missing to initialize working memory with an actual image of a RISC-V program. We can do that at the top of the Fold program with
 
 ```
 wm = read_tsv!('program_image.tsv');
@@ -215,11 +215,15 @@ The requirements for a correct implementation of the program in logic are of thr
 
   3. <a name="req-programorder">**Respecting of program order in memory accesses**</a>: Users can request for a variable in the Fold program to be implemented with a block memory in the output netlist. In those cases the user influences the timing of the accesses to the memory through architectural annotations, and can reorder the accesses from the order they appear in the program. For a faithful implementation of the program, we need to make sure that for each memory read, the last write to the memory cell being read is the write that's supposed to be last according to the program order. This is another requirement for which the compiler produces assertions in the output netlist.
 
-One way users annotate the program to influence the architecture is by inserting `delay(N);` statements. These `delay(N);` statements have the semantics of delaying the execution of the program by the given number of virtual clock cycles. This defines a *virtual* timing of how the operations of the program are supposed to be scheduled in the logic implementation. This virtual timing is adjusted by the compiler to solve for detailed data causality, and to minimize the amount of registers required, but some architectural properties are kept over from, and defined by, the virtual timing. For example the virtual cycle offset from one execution of a statement to another execution of the same statement, e.g. in a loop body, will match the physical clock cycle offset of the respective activations of the implementing circuitry. This applies generally to any paths of execution from a statement to itself as long as the statement has a singular implementation, which would usually be the case.
+One way users annotate the program to influence the architecture is by inserting `delay(N);` statements. These `delay(N);` statements have the semantics of delaying the execution of the program by the given number of virtual clock cycles. This defines a *virtual* timing of how the operations of the program are supposed to be scheduled in the logic implementation. This virtual timing is adjusted by the compiler to solve for detailed data causality, and to minimize the amount of registers required, but some architectural properties are kept over from, and defined by, the virtual timing. For example, whenever you have a path of execution from a statement to itself, e.g. in a loop body, the physical clock cycle offset between subsequent activations of the circuitry implementing the statement is defined to match the accumulated virtual delay on the path. This applies generally to any paths of execution from a statement to itself as long as the statement has a singular implementation, which is ordinarily the case.
 
 For each statement in the Fold program the circuitry implementing the statement counts among the exclusive resources the usage of which must be kept conflict-free. For the avoidance of conflicts the virtual clock cycle offset as we trace a viable execution of the program from a statement to itself cannot be zero.
 
-Returning to our RISC-V core, we have a loop and the function calls to `memio` to consider in avoiding conflicts. The statements in the `memio` function body are a possible source of conflicts depending on the virtual timing pattern of the `memio` calls. Let's focus on the loop body at first. We have three different occurences of a call to `memio`, but based on viable paths of execution, we only need to introduce a virtual delay between the first call and the second, and the first call and the third. To that end we can put `delay(1);` just below the first `memio` call. Then we need to consider paths looping back as another source of conflicts, we can address those by appending a second `delay(1);` statement at the end of the loop body.
+Now let's return to our RISC-V core and analyze the paths of execution there. We have a loop for instruction processing, and this of course results in paths of execution looping back to the same statement. Putting the loop aside, we then still need to consider paths starting at a statement in the `memio` body, returning to the site of the call to `memio`, proceeding to another call site and re-entering the function body from there.
+
+In the loop body we have three occurences of a call to `memio`, but the second and the third call are mutually exclusive, so we need not consider paths between the two.
+
+Overall, to address any conflicts, we can put `delay(1);` statement just below the first `memio` call, and another `delay(1);` statement at the end of the loop body.
 
 Schematically we now have:
 
@@ -250,22 +254,22 @@ for 1 {
 
 At this point we should have a synthesizable and correctly implemented Fold program, but since we haven't asked for the `wm` variable to be implemented with a block memory, it will be implemented directly with flip-flops in the output netlist and involve an excessive amount of logic.
 
-#### Block memories
+#### Memories
 
-To opt for a block memory backing for the `wm` variable, and also for the `regs` variable, we need to annotate both declarations. We do that in the following way:
+To opt for a memory backing for the `wm` variable, and also for the `regs` variable, we need to annotate both declarations. We do that in the following way:
 
 ```
 var wm [128, 4, 8] mut; ` mem.
 var regs [16,32]; `mem.
 ```
 
-These architectural annotations appended after the statement are called "folding hints" and are found in a special syntax resembling code comments: starting with the backtick character `` ` `` and ending with a newline. The individual folding hints are separated with a period character. The hint spelled `mem` requests a variable to be implemented in block memory.
+These architectural annotations appended after the statement are called "folding hints" and are found in a special syntax resembling code comments: starting with the backtick character `` ` `` and ending with a newline. The individual folding hints are separated with a period character. The hint spelled `mem` requests a variable to be implemented in memory.
 
 Turning a variable into a memory-backed one means that we, as the user, are in control of the physical timing of the accesses and are responsible for making sure the accesses respect the program order. We control the timing because the memory accesses are defined to occur in the timing pattern that matches the virtual timing of the statements. (To be precise: The timing is defined to match the virtual timing *up to a constant offset*, and this applies to each memory-backed variable in isolation. Reads or writes to two distinct memory-backed variables need not be implemented to occur in the same cycle even if in virtual timing they do.)
 
-Block memories implementing variables have synchronous read and write ports. By default those read ports are non-transparent, which means they are defined not to see data updates from writes carried out within the same cycle, but with a folding hint they can be made transparent. This is factored in when deciding whether memory accesses respect program order.
+Memories implementing variables have synchronous read and write ports. By default those read ports are non-transparent, which means they are defined not to see data updates from writes carried out within the same cycle, but with a folding hint ports can be made transparent. The transparency or non-transparency of a port is factored in when deciding whether memory accesses respect program order.
 
-Separately from the issue of memory accesses respecting program order, the timing of memory reads and writes is a key factor for the program to meet data causality. The user explicitly schedules the memory reads and writes, and this can easily make for a constraint violating data causality. We can demonstrate that on our core. Consider the following sequence of operations in our program when it's processing a `LOAD` or `STORE` instruction:
+Separately from the issue of memory accesses respecting program order, the timing of memory reads and writes is critical for the program to meet data causality. This is because the user explicitly schedules the memory reads and writes, and this explicit scheduling can easily make for a constraint violating data causality. We can demonstrate that on our core. Consider the following sequence of operations in our program when it's processing a `LOAD` or `STORE` instruction:
 
  1. the `wm` read to obtain the instruction
 
@@ -273,17 +277,17 @@ Separately from the issue of memory accesses respecting program order, the timin
 
  3. the `wm` data access at an address derived from the `regs[rs1]` value
 
-Both steps 2 and 3 depend on data from the previous steps. In our program, step 3 is carried out one virtual cycle after step 1, and because in both steps we are accessing the same memory-backed variable, this will fix the physical timing of the memory accesses: the memory access in step 3 is carried out one physical clock cycle after the memory access in step 1. This is in conflict with the availability of the data that is used for the address in memory access 3. The address is derived from the result of operation 2, which itself can only be carried out once the result of operation 1 is available. Because those are memory reads taking one cycle to produce their result, operation 3 can only be carried out *two cycles* past operation 1 at the earliest, otherwise we don't meet data causality.
+Each step depends on the data from the previous one. In our program, step 3 is carried out one virtual cycle after step 1, and because in both steps we are accessing the same memory-backed variable, this will fix the physical timing of the memory accesses: the memory access in step 3 is to be carried out one physical clock cycle after the memory access in step 1. This is in conflict with the availability of the data that is used for the address in memory access 3. The address is derived from the result of operation 2, which itself can only be carried out once the result of operation 1 is available. Because those are memory reads taking one cycle to produce their result, operation 3 can only be carried out *two cycles* past operation 1 at the earliest, otherwise we don't meet data causality.
 
-We can resolve the conflict by inserting a `delay(1);` statement just after the fetching of operands from registers, and thus postponing step 3 by one virtual cycle.
+By inserting a `delay(1);` statement just after the fetching of operands from registers, we postpone step 3 by one virtual cycle, and allow for data causality to be met on this data path.
 
-Even then, in our core as it stands, there's still yet another data causality violation. Let's say we are processing a `LOAD` instruction. We continue the steps from above with step 4:
+Even then, in our core as it stands, there's still yet another data causality violation. Let's say we are processing a `LOAD` instruction. We add step 4 to the steps from above:
 
  4. write to `regs[rd]` with data fetched in step 3
 
-As we trace execution from step 2 to step 4, we are delayed by one virtual cycle with the `delay(1);` statement we have just added. Because in steps 2 and 4 we are once again accessing an identical memory-backed variable, this time it's `regs`, we are constraining the physical timing: The memory write in step 4 ought to be performed in the next cycle after the memory read in step 2. As an important detail, for both memory reads and writes, Fold considers memory accesses carried out in the cycle in which the address is presented on the memory port, so for a write this would the same cycle in which the data to be written is presented, and for reads this would be one cycle ahead of the read data being produced back. So considering the memory accesses 2, 3, 4 in our core, with similar reasoning as before, we find out step 4 can only be carried out *two cycles* past step 2 for data causality sake. To resolve the conflict here, we can add another `delay(1);` statement just before the write to the register file in handling of the `LOAD` opcode.
+As we trace execution from step 2 to step 4, we are delayed by one virtual cycle with the `delay(1);` statement we have just added. Because in steps 2 and 4 we are once again accessing the same memory-backed variable, this time it's `regs`, we are constraining the physical timing: The memory write in step 4 ought to be performed in the next cycle after the memory read in step 2. Now as an important detail, for both memory reads and writes, Fold considers memory accesses carried out in the cycle in which the address is presented on the memory port, so for a write this would the same cycle in which the data to be written is presented, and for reads this would be one cycle ahead of the read data being produced back. So considering the memory accesses 2, 3, 4 in our core, with similar reasoning as before, we find out step 4 can only be carried out *two cycles* past step 2 for data causality sake. To resolve the violation here, we can add another `delay(1);` statement in front of the write to the register file (this delay will be specific to the `LOAD` opcode).
 
-Once we have added those new `delay(1);` statements, we can remove the one final `delay(1);` statement at the end of the loop body that we introduced to avoid conflicts with execution paths looping back, since this one is no longer required.
+Once we have added those new `delay(1);` statements to help with data causality, we can remove the one final `delay(1);` statement at the end of the loop body that we introduced to avoid usage conflicts with execution paths looping back, since this final delay is now redundant.
 
 There's one final detail to tweak. We are initializing the core's working memory with
 
@@ -306,13 +310,13 @@ In the code we have written so far we have three `delay(1);` statements in the l
 
 We can pick any top-level statement in the loop body, and picture a path of execution from the statement to itself. This path will pick up a virtual delay of two or three cycles, and by the principle we have stated earlier this will also be the physical clock cycle period of the activation of the circuitry implementing the statement. By this we know it takes two or three physical clock cycles for the core as-is to process an instruction, though we don't know in detail what stage of processing will happen in what cycle. A priori we don't even know if the core will be done with one instruction before it starts processing the next (as a matter of fact it won't, as the write to the register file from processing the preceding instruction will overlap with fetching the next instruction from working memory).
 
-As the next improvement to our core, we wish for the core to process one instruction per clock cycle, except for `LOAD` and `STORE` instructions accessing the working memory and except for jumps and branching. We can do that with careful adjustement of the virtual timing, and a small change to the control flow of the program. This will in effect make our core pipelined: The synthesized core will be processing multiple instructions at the same time in different stages of processing (even more so than it does already).
+As the next improvement to our core, we wish for the core to process one instruction per clock cycle, except for `LOAD` and `STORE` instructions accessing working memory and except for jumps and branching. We can do that with careful adjustement of the virtual timing, and a small change to the control flow of the program. This will in effect make our core pipelined: The synthesized core will be processing multiple instructions at the same time in different stages of processing (even more so than it does already).
 
 First let us comment on the `memio` function and the usage constraints inherent in it. We have said earlier we wrote the program of the core to use the `memio` funtion for all working memory accesses to help with mapping to hardware primitives later on. This is because we wish to infer a memory with a single R/W port, capable of at most a single read or single write each cycle. Having a `memio` function for all accesses (which as an ordinary function can only be invoked once each virtual cycle) makes the restriction of one R/W operation per cycle manifest in the synthesized circuitry, aiding in inference of the right kind of memory port downstream in the synthesis flow once the netlist compiled by Fold is being mapped to available hardware primitives.
 
-The one R/W port limitation brings us to why the `LOAD` and `STORE` instructions must be an exception to the one-instruction-per-cycle processing rate: Those instructions will require two accesses to the working memory to process, but we can only have one access each cycle. So when processing a `LOAD` or `STORE` instruction we need to postpone some later instruction fetches, and we will one way or another temporarily lower the rate of instruction processing.
+The one R/W port limitation brings us to why the `LOAD` and `STORE` instructions must be an exception to the one-instruction-per-cycle processing rate: Those instructions will require two accesses to working memory to process, but we can only have one access each cycle. So when processing a `LOAD` or `STORE` instruction we need to postpone some later instruction fetches, and we will one way or another temporarily lower the rate of instruction processing.
 
-After we fetch an instruction, we need two cycles before we can be ready with the `LOAD` or `STORE` data access to the working memory because the address of the access is derived from a register value. For efficiency, we can interleave the fetch of the next instruction with the processing of the `LOAD` or `STORE` instruction: The next instruction will be fetched the next cycle, but the rest of the processing of this next instruction, and processing of all future instructions, will be postponed with an extra delay of one cycle.
+From data causality standpoint, after we fetch a `LOAD` or `STORE` instruction, we need two cycles before we can be ready with the second access to working memory (because the address of the access is derived from a register value, and the register to be read is selected by an instruction field). For efficiency, we can interleave the processing of the `LOAD` or `STORE` instruction with the fetching of the next instruction. We will let the next instruction be fetched inbetween the two working memory accesses of the `LOAD` or `STORE` instruction.
 
 So let's say we are processing instructions 1, 2, 3, 4 one after another, and label `Ix` the instruction fetch for instruction `x`, and `Dx` the data access for a `LOAD` or `STORE` instruction `x`.
 
@@ -326,15 +330,15 @@ If also instruction 2 is a `LOAD` or `STORE`, the sequence would be:
 | `I1` | `I2` | `D1` | `I3` | `D2` | `I4` | ... |
 | --- | --- | --- | --- | --- | --- | --- |
 
-With this picture for the sequencing of accesses to the working memory, we can start implementing the code changes to our core. Let's make a list of the changes we need to make:
+With this picture for the sequencing of accesses to working memory, we can start implementing the code changes to our core. Let's make a list of the changes we need to make:
 
- * Overall, if our goal is to process an instruction each cycle (up to some exceptions), we need to make the virtual delay of an execution through the loop's body be one cycle. We can't altogether remove the delays we inserted earlier for data causality, but we can add a negative delay at the end of the loop iteration, and an extra one in handling of the `LOAD` opcode, such that the delay total comes out to one. This will be in conflict with data causality for the `pc` variable on jumps or branches, but we will address that separately.
+ * Overall, if our goal is to process an instruction each cycle (up to some exceptions), we need to make the virtual delay of an execution through the loop's body be one cycle. We can't altogether remove the delays we inserted earlier for data causality, but we can insert additional negative delays so that the total per an iteration of the loop comes out to one cycle. This will be in conflict with data causality for the `pc` variable on jumps or branches, but we will address that separately.
 
  * To implement a conflict-free sequencing of working memory accesses according to the scheme we discussed, we introduce a new mutable variable `extra_delay1` to signal from the processing of a `LOAD` or `STORE` instruction that the processing of the next instruction should have an extra virtual delay inbetween the fetching of the instruction and the rest of the processing.
 
- * Let's focus on the `regs` accesses and discuss the timing of the reads that follow after the write of a result to `regs[rd]` in the processing of an instruction. By the insertion of the negative delays, we have made the `regs` read in the follow-up instruction be carried out one or two physical cycles earlier that they would be otherwise, in some cases reordering the read *before* the write (as long as the port in non-transparent). With this state of affairs we are failing to uphold the program order. Luckily making the read ports transparent is all we need to do. Even in the processing of a `LOAD` instruction, which causes a late register write, this will work out because of the extra delay signaled into the next instruction by `extra_delay1`.
+ * Let's focus on the `regs` accesses. By the insertion of the negative delays, we have made the `regs` reads be carried out one or two physical cycles earlier relative to the writes from previous instructions. In some cases, this reorders a read *before* a write in conflict with the program oder. Luckily making the read ports transparent is all we need to do to fix this. Even in the processing of a `LOAD` instruction, which causes a late register write, the ordering will work out thanks to the extra delay signaled into the next instruction with `extra_delay1`.
 
- * To address data causality around `pc`, we need to insert virtual delays in case of jumps or branching instructions. `pc` is the fetch address for the next instruction, so the fetching of the next instruction needs to be appropriately delayed from the fetching of the current instruction so that there's a feasible scheduling of the operations that depend on the current instruction and influence the `pc` for the next instruction. We add a `delay(2);` statement to code blocks of opcodes `JAL`, `JALR`, and `BRANCH` each.
+ * To address data causality around `pc`, we need to insert virtual delays in case of jumps or branching instructions. When modifying the program counter, we need to postpone the fetching of the next instruction to meet data causality. We add a `delay(2);` statement to code blocks of opcodes `JAL`, `JALR`, and `BRANCH` each.
 
 This is what our code looks like now, with some parts redacted out:
 
@@ -421,7 +425,7 @@ can be optimized out by the machine code compiler since `delay(N);` is a no-op w
 
 #### Branch prediction
 
-We can implement trivial branch prediction and speculative execution into our core! We will predict all branches not to be taken, that is, when we encounter a `BRANCH` instruction, we will first go on as if the execution wasn't redirected, and only a couple of cycles later once the result of the branch conditional is available will we correct our prediction if need be.
+We can implement trivial branch prediction and speculative execution into our core! We will predict all branches not to be taken, that is, when we encounter a `BRANCH` instruction, we will first go on as if the execution wasn't redirected, and only a couple of cycles later once the result of the branch condition is available will we correct our prediction if need be.
 
 This would be cumbersome to express in the Fold program if it wasn't for the `fork` keyword, allowing us to fork the execution of the Fold program into multiple threads. The program execution semantics, program order considerations, and the need to avoid conflicting usage of resources carries over to when the execution of the Fold program is split into two or more threads. The `fork` keyword in the language is accompanied with a `quit` keyword to terminate a thread of execution.
 
