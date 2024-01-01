@@ -534,22 +534,26 @@ class BlockSeq:
     def runthrough_simple(self):
         assert self.finalized
         p = self.exit
+        voffset = 0
         while p != self.entry:
             hit = False
             for edge in self.f.immutlinks.walk_eps(p):
                 if edge.hot == rtl.HIGH and edge.hot_back == rtl.LOW \
-                        and edge._xfer == Id():
+                        and (edge._xfer == Id() or isinstance(edge._xfer, FixedOffset)):
                     if hit:
                         return False
                     hit = True
                     p = edge.tail
+                    voffset += 0 if edge._xfer == Id() else edge._xfer.offset
                 elif edge.hot == rtl.LOW:
                     continue
                 else:
                     return False
             if not hit:
                 return False
-        return True
+        # We have found `self.exit` is reached with a simple path from `self.entry`,
+        # now check the composed transformation is an empty one
+        return voffset == 0
 
     @property
     def runthrough(self):
@@ -562,7 +566,7 @@ class BlockSeq:
                 hit = False
                 for edge in self.f.immutlinks.walk_eps(p):
                     if edge.hot == rtl.HIGH and edge.hot_back == rtl.LOW \
-                            and edge._xfer == Id():
+                            and (edge._xfer == Id() or isinstance(edge._xfer, FixedOffset)):
                         assert not hit
                         hit = True
                         p = edge.tail
