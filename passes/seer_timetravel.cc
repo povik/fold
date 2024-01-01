@@ -265,7 +265,7 @@ struct SeerTimetravelPass : Pass {
 					offset_nodes[pair.second].insert(pair.first);
 				}
 				for (auto pair : offset_nodes) {
-					log("Time traveling %ld nodes by offset %dß\n",
+					log("Time traveling %ld nodes by offset %d\n",
 						pair.second.size(), pair.first);
 					for (auto cell : pair.second)
 						log_debug("\t%s\n", log_id(cell.name()));
