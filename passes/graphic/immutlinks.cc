@@ -600,12 +600,12 @@ struct ImportNode {
 
 					if (inward.dir)
 						S.append(transform(links, inward, 
-							mb.LogicAnd(NEW_ID, import_valid.at(inward), inward.hot),
+							mb.LogicAnd(NEW_ID, import_valid.at(inward), inward.hot, false, src),
 						true));
 					else
 						S.append(mb.LogicAnd(NEW_ID,
 							transform(links, inward, import_valid.at(inward), true),
-							inward.hot
+							inward.hot, false, src
 						));
 					B.append(transform(links, inward, import_data.at(inward)));
 				}
