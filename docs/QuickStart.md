@@ -6,7 +6,7 @@ A design written in Fold takes the form of a program which combines procedural a
 
 For a reference on the language in which the programs are written, see the language reference (TODO).
 
-Fold programs can be compiled down to performant machine code to test out the programmatic description while ignoring any choice of architecture for the digital logic. See the machine code compiler (TODO).
+Fold programs can be compiled down to performant machine code to test out the programmatic description while ignoring any choice of architecture for the digital logic. See the [machine code compiler](MachineCode.md).
 
 ## Sample program (RISC-V core)
 
