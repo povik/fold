@@ -50,13 +50,14 @@ class BlockImpl:
     def build(self):
         m = self.frame.design.rtl_module
         ei_width = self.frame.design.execid_width
-        m.connect(self.en, rtl.OR(m, *self.en_sources))
-        m.connect(self.execid, rtl.PMUX(m, self.en_sources,
-                                        self.execid_sources, width=ei_width))
+        with rtl.SynthAttrContext(src=self.src):
+            m.connect(self.en, rtl.OR(m, *self.en_sources))
+            m.connect(self.execid, rtl.PMUX(m, self.en_sources,
+                                            self.execid_sources, width=ei_width))
 
         with rtl.SynthAttrContext(fold_debug=True,
                                   for_blockimpl=self.label,
-                                  src=markers_str(self.markers)):
+                                  src=self.src):
             m.add_cell_keep(
                 "\\MUTEX_ASSERT",
                 ("\\CLK", self.frame.d.rtl_clk),
