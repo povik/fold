@@ -1,3 +1,5 @@
 *.o
 *.d
 __pycache__
+/docs/scratch/
+.commitmsg
