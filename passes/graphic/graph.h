@@ -308,6 +308,7 @@ public:
 				if (down) {
 					Immutnode *upper_node = links.nodes_by_index.at(pos);
 					edge = links.edges.at(upper_node).at(goal.second[pos.second.size()]);
+					log_assert(edge.in_spantree);
 					return edge;
 				} else {
 					log_assert(pos.second.size() >= 1);
@@ -315,6 +316,7 @@ public:
 					upper.second.pop_back();
 					Immutnode *upper_node = links.nodes_by_index.at(upper);
 					edge = links.edges.at(upper_node).at(pos.second.back());
+					log_assert(edge.in_spantree);
 					return Immutlinks::reverse(edge);
 				}
 			}
