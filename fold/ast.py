@@ -278,7 +278,7 @@ class linecol_tracking_peekable_iter(peekable_iter):
         return m
 
 
-special = bi_ops + prefix_ops + list("[](),{};=") + [".", "..", ":", "?"]
+special = bi_ops + prefix_ops + list("[](),{};=") + [".", "..", ":", "?", "<-", "->"]
 num = "0123456789"
 alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 identfirst = alpha + "_$"
@@ -582,9 +582,20 @@ def parse_expr_part_pre(t):
         return Op(opname="{", args=m)
     elif t.consume(is_prefix_op):
         return Op(opname=t.last, args=[parse_expr_part(t)])
-    elif t.consume(is_atom):
-        tok = t.last
-        if is_ident(tok) and t.consume("("):
+    elif t.consume(is_ident):
+        name = t.last
+        channel = False
+        if t.consume("<-"):
+            name += "<-"
+            channel = True
+        elif t.consume("->"):
+            name += "->"
+            channel = True
+
+        if channel and t.consume("$nonblocking"):
+            name += "$nonblocking"
+
+        if t.consume("("):
             args = []
             done = False
             while (not args) or t.consume(","):
@@ -594,9 +605,13 @@ def parse_expr_part_pre(t):
                 args.append(parse_expr(t))
             if not done:
                 t.require(")")
-            val = Op(tok, args)
+            val = Op(name, args)
         else:
-            val = Var(tok) if is_ident(tok) else Const(tok)
+            if channel:
+                t.abort()
+            val = Var(name)
+    elif t.consume(is_atom):
+        val = Const(t.last)
     else:
         t.abort()
     return val
@@ -754,7 +769,9 @@ def parse_ident(t):
 
 @mark_positions
 def parse_statement(t, in_elif=False):
-    if t.consume("func"):
+    if t.consume("chan"):
+        return parse_chan(t)
+    elif t.consume("func"):
         return parse_func(t)
     elif t.consume("goto"):
         t.require(is_ident)
@@ -904,6 +921,24 @@ def parse_func(t):
 
     return Tuple("func", ident, args, rets, stats,
                  markers=(markers0, markers1))
+
+
+@mark_positions
+def parse_chan(t):
+    t.require(is_ident); ident = t.last;
+    args, rets = [], []
+
+    t.require("(")
+    if not t.consume(")"):
+        args = parse_named_type_list(t)
+        t.require(")")
+
+    t.require("(")
+    if not t.consume(")"):
+        rets = parse_named_type_list(t)
+        t.require(")")
+
+    return Tuple("chan", ident, args, rets)
 
 
 def parse_spec(t):
