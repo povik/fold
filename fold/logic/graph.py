@@ -257,7 +257,8 @@ class Graph(BaseGraph):
             if node in printed:
                 continue
             printed.add(node)
-            print("\t%s [label=\"%s\" shape=box3d fillcolor=gray style=filled];" % (id(node), node.label), file=f)
+            print("\t%s [label=\"%s\" shape=box3d fillcolor=gray style=filled];"
+                  % (id(node), node.label.replace("'", "\\\"")), file=f)
 
         for edge in edges:
             if edge in printed:

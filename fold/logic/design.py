@@ -106,7 +106,7 @@ class ImmutLink(Edge):
 
     @property
     def internal_labels(self):
-        return ([] if self._xfer == Id() else [f"{self._xfer}"]) + [str(self.tuples[0])]
+        return ([] if self._xfer == Id() else [f"{self._xfer}"])
 
 
 class Frame:
