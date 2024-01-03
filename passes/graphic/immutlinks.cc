@@ -1074,6 +1074,14 @@ struct ImportsPass : Pass {
 				Immutnode *import_from = cell_immutnode(cell, links, ID(FROM_NODE));
 				Immutnode *import_to = cell_immutnode(cell, links, ID(TO_NODE));
 
+				if (0) {
+					std::string ns = cell->getParam(ID(NAMESPACE)).decode_string();
+					std::string stalk = cell->getParam(ID(STALK)).decode_string();
+					log("Processing cell %s\n", log_id(cell));
+					log("\tnamespace: %s\n", ns.c_str());
+					log("\tstalk: %s\n", stalk.c_str());
+				}
+
 				std::string varname = cell->name.str();
 				if (cell->attributes.count(ID(implements_variable)))
 					varname = cell->attributes[ID(implements_variable)].decode_string();
