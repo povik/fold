@@ -759,6 +759,19 @@ def REDUCE_BOOL(m, val):
     return m.operate("$reduce_bool", val)
 
 
+def TIMEPORTAL(m, a, ay, b, by):
+    assert a.width == ay.width
+    assert b.width == by.width
+    # TODO: should not be exposing the cell
+    return m._add_cell("\\TIMEPORTAL",
+        ("\\A", a),
+        ("\\AY", ay),
+        ("\\B", b),
+        ("\\BY", by),
+        A_WIDTH=a.width,
+        B_WIDTH=b.width
+    )
+
 def wrap_in_timeportal(m, *ports, **kwargs):
     mapped_ports = []
 
@@ -775,15 +788,7 @@ def wrap_in_timeportal(m, *ports, **kwargs):
             a = concat(a, signal)
             ay = concat(ay, signal_like)
 
-    cell = m._add_cell("\\TIMEPORTAL",
-        ("\\A", a),
-        ("\\AY", ay),
-        ("\\B", b),
-        ("\\BY", by),
-        A_WIDTH=a.width,
-        B_WIDTH=b.width,
-        #**kwargs
-    )
+    cell = TIMEPORTAL(m, a, ay, b, by)
     for k, v in kwargs.items():
         cell.set_string_attribute(ys.IdString(f"\\{k}"), v)
     return mapped_ports
@@ -807,14 +812,7 @@ def wrap_in_timeportal2(m, bank_a_domain=None, bank_a_constraint=None,
             a = concat(a, signal)
             ay = concat(ay, signal_like)
 
-    cell = m._add_cell("\\TIMEPORTAL",
-        ("\\A", a),
-        ("\\AY", ay),
-        ("\\B", b),
-        ("\\BY", by),
-        A_WIDTH=a.width,
-        B_WIDTH=b.width,
-    )
+    cell = TIMEPORTAL(m, a, ay, b, by)
 
     if bank_a_domain is not None:
         cell.set_string_attribute(ys.IdString("\\timetravel_bank_a_domain"),
