@@ -933,7 +933,7 @@ def main():
     try:
         input_fn = sys.argv[1] if len(sys.argv) >= 2 else "/dev/stdin"
         print(parse_spec_from_file(input_fn))
-    except BadInputException as e:
+    except BadInput as e:
         print(e)
 
 
