@@ -920,6 +920,8 @@ class BlockSeq:
                 self.rewind("quit")
             elif stat[0] == "func":
                 self.d.register_func(self.frame, stat)
+            elif stat[0] == "chan":
+                self.d.register_chan(self.frame, stat)
             elif stat[0] == "for":
                 with stat as (_, cond, body):
                     have_cond = cond is not None
@@ -1191,6 +1193,93 @@ class Design:
                     )
                 self.rtl_module.add_cell_keep(f"\\{module_name}", *conns)
             self.funcseqs[name] = seq
+
+    def register_chan(self, frame, ast):
+        if frame != self.top_frame:
+            raise BadInput("channels can only be declared in the top scope")
+        m = self.rtl_module
+        with ast as (_1, name, lhsdecl, rhsdecl):
+            avalid_i = m.add_wire(f"\\{name}_avalid_i", 1)
+            avalid_o = m.add_wire(f"\\{name}_avalid_o", 1)
+            bvalid_i = m.add_wire(f"\\{name}_bvalid_i", 1)
+            bvalid_o = m.add_wire(f"\\{name}_bvalid_o", 1)
+            a = [avalid_i]
+            ay = [avalid_o]
+            b = [bvalid_i]
+            by = [bvalid_o]
+            for varname, shapenode in lhsdecl:
+                shape, mutable = self.eval_shape(shapenode)
+                a.append(m.add_wire(f"\\{name}_a_{varname}_i", shape.bitlen))
+                ay.append(m.add_wire(f"\\{name}_a_{varname}_o", shape.bitlen))
+            for varname, shapenode in rhsdecl:
+                shape, mutable = self.eval_shape(shapenode)
+                b.append(m.add_wire(f"\\{name}_b_{varname}_i", shape.bitlen))
+                by.append(m.add_wire(f"\\{name}_b_{varname}_o", shape.bitlen))
+            rtl.TIMEPORTAL(m,
+                rtl.concat(*a), rtl.concat(*ay),
+                rtl.concat(*b), rtl.concat(*by)
+            )
+            for opname, leftward in zip([f"{name}->$nonblocking",
+                                         f"{name}<-$nonblocking"], [False, True]):
+                opast = Tuple("func", opname, 
+                    [Tuple("%ivalid", Tuple([Const(1)], False, False))] + (rhsdecl if leftward else lhsdecl),
+                    [Tuple("%ovalid", Tuple([Const(1)], False, False))] + (lhsdecl if leftward else rhsdecl),
+                    []
+                )
+                self._function_asts[opname] = (frame, opast)
+                seq = BlockSeq.from_ast_body(self, [], injectvars=opast[2] + opast[3],
+                                             framename=opname, function=True,
+                                             parent_frame=self.top_frame)
+                seq.entry._label = opname
+                i, o = (a, by) if not leftward else (b, ay)
+                for sig, arg in zip(i, opast[2]):
+                    argname, shapenode = arg
+                    shape, mutable = self.eval_shape(shapenode)
+                    val = seq.frame.vars[argname].eval(seq.entry)
+                    if argname == "%ivalid":
+                        m.connect(sig, rtl.AND(m, seq.entry.en, val.extract_signal()))
+                    else:
+                        m.connect(sig, val.extract_underlying_signal())
+                for sig, ret in zip(o, opast[3]):
+                    retname, shapenode = ret
+                    shape, mutable = self.eval_shape(shapenode)
+                    seq.frame.vars[retname].assign(seq.entry, SignalValue(sig, shape))
+                self.funcseqs[opname] = seq
+            for opname, leftward in zip([f"{name}->",
+                                         f"{name}<-"], [False, True]):
+                argsdecl = rhsdecl if leftward else lhsdecl
+                retsdecl = lhsdecl if leftward else rhsdecl
+
+                argvars = []
+                for varname, shapenode in argsdecl:
+                    shape, mutable = self.eval_shape(shapenode)
+                    assert not mutable
+                    argvars.append((varname, shape))
+                retvars = []
+                for varname, shapenode in retsdecl:
+                    shape, mutable = self.eval_shape(shapenode)
+                    assert not mutable
+                    retvars.append((varname, shape))
+                argset = ', '.join(varname for varname, shape in argvars)
+                tmpdecl = ', '.join(f"{varname}_tmp {shape!s} mut" for varname, shape in retvars)
+                tmpset = ', '.join(f"{varname}_tmp" for varname, shape in retvars)
+                retset = ', '.join(varname for varname, shape in retvars)
+                body_ast = parse_spec_from_buffer(f'''
+                        var _valid [1] mut, {tmpdecl};
+                    entry:
+                        _valid, {tmpset} = {opname}$nonblocking(1, {argset});
+                    q:
+                        if _valid {{
+                        feed:
+                            {retset} = {tmpset};
+                        }}
+                        delay(1);
+                        if !_valid {{
+                            goto entry;
+                        }}
+                ''', f"implementing '{opname}'")
+                opast = Tuple("func", opname, argsdecl, retsdecl, body_ast)
+                self._function_asts[opname] = (frame, opast)
 
     def register_func(self, frame, ast):
         self._function_asts[ast[1]] = (frame, ast)
