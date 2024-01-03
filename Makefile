@@ -74,6 +74,19 @@ test: build/fold.so
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
 	done
+	@echo "Import feasibility test"
+	@for testcase in tests/import_feasibility/*.fold; \
+	do \
+		echo -n "$${testcase}... "; \
+		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth;" 1>/dev/null 2>&1; then \
+			echo -e "\e[31mFAIL\e[0m"; \
+			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
+			$(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth;"; \
+		else \
+			echo -e "\e[32mOK\e[0m"; \
+		fi \
+	done
+
 
 COVERAGE_ARGS = --rcfile=coverage.rc --branch --append --data-file build/python.coverage
 frontend_coverage:
