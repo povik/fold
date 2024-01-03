@@ -215,7 +215,8 @@ protected:
 	virtual void node_added(Immutnode *node) final
 	{
 		log_assert(!indexed);
-		log_assert(!nodes_by_id.count(node->id));
+		if (nodes_by_id.count(node->id))
+			Yosys::log_error("Duplicate node: %s\n", node->id.c_str());
 		nodes_by_id[node->id] = node;
 	}
 
