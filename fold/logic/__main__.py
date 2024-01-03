@@ -22,6 +22,7 @@ def main():
                         default='/dev/stdout')
     parser.add_argument('-D', '--dump-immutlinks', type=pathlib.Path,)
     parser.add_argument('-d', '--dump-mutlinks', type=pathlib.Path,)
+    parser.add_argument('-s', '--dump-immutlinks2', action='store_true',)
     parser.add_argument('-E', '--execid', help='Add ExecID instrumentation for full debugging',
                         action="store_true")
     parser.add_argument('-W', '--execid-width', help='Set width of ExecID tags',
@@ -66,6 +67,8 @@ def main():
     try:
         d.build()
         d.rtl_module.ym.fixup_ports()
+        if args.dump_immutlinks2:
+            rtl.ys.run_pass("scratchpad -get immutlinks", rtl_design.yd)
         if not args.no_synth:
             rtl.ys.run_pass(f"plugin -i {str(pathlib.Path(__file__).resolve().parents[2])}/build/fold.so", rtl_design.yd)
             rtl.ys.run_pass("fold_synth" + (" --execid" if args.execid else ""), rtl_design.yd)
