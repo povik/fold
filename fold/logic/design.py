@@ -799,7 +799,11 @@ class BlockSeq:
 
     def eval_cond(self, ast):
         m = self.d.rtl_module
-        cond_sig = rtl.REDUCE_BOOL(m, self.eval(ast).extract_signal())
+        seq = BlockSeq(self.d, self.f)
+        stalk = self.immutlink(self.curr, seq.entry)
+        self.mutlink(self.curr, seq.entry, stalk, hot=rtl.HIGH)
+        cond_sig = rtl.REDUCE_BOOL(m, seq.eval(ast).extract_signal())
+        seq.finalize()
         with rtl.SynthAttrContext(src=markers_str(ast.markers)):
             rtl.ASSERT(m,
                 self.curr.en,
