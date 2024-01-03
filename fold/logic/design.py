@@ -1264,14 +1264,16 @@ class Design:
                 tmpdecl = ', '.join(f"{varname}_tmp {shape!s} mut" for varname, shape in retvars)
                 tmpset = ', '.join(f"{varname}_tmp" for varname, shape in retvars)
                 retset = ', '.join(varname for varname, shape in retvars)
+                def comma(a):
+                    return f", {a}" if a != "" else ""
                 body_ast = parse_spec_from_buffer(f'''
-                        var _valid [1] mut, {tmpdecl};
+                        var _valid [1] mut{comma(tmpdecl)};
                     entry:
-                        _valid, {tmpset} = {opname}$nonblocking(1, {argset});
+                        _valid{comma(tmpset)} = {opname}$nonblocking(1{comma(argset)});
                     q:
                         if _valid {{
                         feed:
-                            {retset} = {tmpset};
+                            {f"{retset} = {tmpset};" if retset != "" else ""}
                         }}
                         delay(1);
                         if !_valid {{
