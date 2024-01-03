@@ -919,7 +919,7 @@ class BlockSeq:
             elif stat[0] == "quit":
                 self.rewind("quit")
             elif stat[0] == "func":
-                self.d._function_asts[stat[1]] = (self.frame, stat)
+                self.d.register_func(self.frame, stat)
             elif stat[0] == "for":
                 with stat as (_, cond, body):
                     have_cond = cond is not None
@@ -1191,6 +1191,9 @@ class Design:
                     )
                 self.rtl_module.add_cell_keep(f"\\{module_name}", *conns)
             self.funcseqs[name] = seq
+
+    def register_func(self, frame, ast):
+        self._function_asts[ast[1]] = (frame, ast)
 
     # TODO: @reentry_guard
     def request_func_blockseq(self, opname):
