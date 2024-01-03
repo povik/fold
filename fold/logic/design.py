@@ -1162,7 +1162,7 @@ class Design:
 
                 feed_bimpl = seq.lookup_label_in_children("feed")
 
-                for retname, shapenode in retsdecl:
+                for retname, shapenode in retsdecl: # (4)
                     shape, mutable = self.eval_shape(shapenode)
                     retwire = m.add_wire(f"\\{name}_{retname}", shape.bitlen)
                     retwire.yw.port_input = True
