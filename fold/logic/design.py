@@ -1096,9 +1096,11 @@ class Design:
         )
 
     def impl_top_body(self, body):
-        seq = BlockSeq.from_ast_body(self, body)
-        seq.entry._label = "entry"
+        seq = BlockSeq(self)
         self.top_frame = seq.frame
+        seq.impl_ast_body(body)
+        seq.finalize()
+        seq.entry._label = "entry"
         self._impl_crank(seq)
 
     def _impl_func(self, opname, name):
