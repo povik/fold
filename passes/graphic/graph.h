@@ -249,6 +249,7 @@ public:
 
 	void index();
 	void check();
+	void sort_edges();
 	void build_index(Immutnode *root);
 
 	struct SpantreeWalk {

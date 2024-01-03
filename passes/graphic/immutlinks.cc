@@ -303,6 +303,7 @@ void Immutlinks::parse(Module *m, std::string content) {
 }
 
 void Immutlinks::index() {
+	sort_edges();
 	for (auto node : nodes) {
 		for (const auto &edge : edges[node])
 		if (!edge.in_spantree)
@@ -327,7 +328,7 @@ void Immutlinks::check() {
 	}
 }
 
-void Immutlinks::build_index(Immutnode *root)
+void Immutlinks::sort_edges()
 {
 	for (auto node : nodes) {
 		std::vector<Immutedge> &node_edges = edges[node];
@@ -337,7 +338,10 @@ void Immutlinks::build_index(Immutnode *root)
 			return false;
 		});
 	}
+}
 
+void Immutlinks::build_index(Immutnode *root)
+{
 	std::vector<int> curr_index = { 0 };
 	std::vector<Immutnode *> stack;
 	stack.push_back(root);
