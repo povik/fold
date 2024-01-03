@@ -50,7 +50,7 @@ test: build/fold.so
 		fi \
 	done
 	@echo "Target: logic"
-	@for testcase in tests/programs/*.fold; \
+	@for testcase in tests/programs/*.fold tests/programs/*.fold.disabled_mcode; \
 	do \
 		echo -n "$${testcase}... "; \
 		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -clock clk -reset rst" 1>/dev/null 2>&1; then \
