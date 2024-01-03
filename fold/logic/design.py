@@ -131,7 +131,7 @@ class Frame:
         self.mutlinks = DirectedGraph()
 
         self.fg_substitutions = {}
-        self.function = False
+        self.is_function = False
 
     def frame_execid(self, bi):
         m = self.design.rtl_module
@@ -503,7 +503,7 @@ class BlockSeq:
         self.d = d
         self.f = self.frame = Frame(d, parent=parent_frame,
                                     framename=framename)
-        self.f.function = is_function
+        self.f.is_function = is_function
         self.rewind()
         self.entry = self.curr
         self._exit = None
@@ -701,7 +701,6 @@ class BlockSeq:
                       function=False):
         seq = BlockSeq(d, parent_frame, framename=framename,
                        is_function=function)
-        seq.f.is_function = function
         for vardecl in injectvars:
             seq.frame.impl_var(vardecl, injected=True)
         seq.frame.labels.update(inject_labels)
@@ -1016,11 +1015,11 @@ def fixup_goto_imprints(self):
     level = len(list(common.stack))
     self.imprint_pop = []
     for f in list(reversed(list(self.head.f.stack)))[level:]:
-        if f.function:
+        if f.is_function:
             self.imprint_pop.append(MutLink.MATCH_NONE)
     self.imprint_push = []
     for f in list(reversed(list(self.tail.f.stack)))[level:]:
-        if f.function:
+        if f.is_function:
             self.imprint_push.append(MutLink.MATCH_ANY)
 
 
