@@ -296,7 +296,6 @@ class VarImplMutable(VarImpl):
                               implements_variable=self.varname,
                               for_scope=str(bi))
         en = self.m.add_wire(f"$import${self.varname}$en", 1,
-                             try_prove_zero=True,
                              implements_variable=self.varname,
                              for_scope=str(bi))
         VarImplMutable._import.register((self, bi), (sig, en))
