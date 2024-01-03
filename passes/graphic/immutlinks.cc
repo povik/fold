@@ -121,6 +121,18 @@ void dump_bit(std::ostream &stream, SigBit bit)
 	stream << " end\n";
 }
 
+void dump_str(std::ostream &stream, std::string str)
+{
+	stream << "'";
+	for (char c : str) {
+		if (c == '\'')
+			stream << "\\'";
+		else
+			stream << c;
+	}
+	stream << "'";
+}
+
 void Immutlinks::dump_node(std::ostream &stream, const Immutnode *node)
 {
 	stream << "  node " << node->id.c_str() << " \n";
@@ -140,9 +152,9 @@ void Immutlinks::dump_node(std::ostream &stream, const Immutnode *node)
 		stream << "\n";
 	}
 	if (!node->src.empty()) {
-		stream << "    src '";
-		stream << node->src;
-		stream << "'\n";
+		stream << "    src ";
+		dump_str(stream, node->src);
+		stream << "\n";
 	}
 	stream << "  end\n";
 }

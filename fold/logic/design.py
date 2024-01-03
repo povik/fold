@@ -1229,7 +1229,8 @@ class Design:
             assert isinstance(node.en, rtl.Wire)
             d += f"\ten {escape_id(node.en.name)} end\n"
             if node.src != "":
-                d += f"\tsrc '{node.src}'\n"
+                escaped_src = node.src.replace("'", "\\'")
+                d += f"\tsrc '{escaped_src}'\n"
             d += f"end\n"
         for edge in self.top_frame.immutlinks.edges:
             d += f"edge {escape_id(edge.ep1.label)} {escape_id(edge.ep2.label)}\n"
