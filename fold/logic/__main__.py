@@ -20,7 +20,6 @@ def main():
                         help='source file names')
     parser.add_argument('-o', '--output', type=pathlib.Path,
                         default='/dev/stdout')
-    parser.add_argument('-b', '--dump-blockimpls', type=pathlib.Path,)
     parser.add_argument('-D', '--dump-immutlinks', type=pathlib.Path,)
     parser.add_argument('-d', '--dump-mutlinks', type=pathlib.Path,)
     parser.add_argument('-E', '--execid', help='Add ExecID instrumentation for full debugging',
