@@ -1,0 +1,6 @@
+var t [4] mut;
+for 1 {
+	if __arbitrary() { t = __arbitrary(4); }
+	__requires(t);
+	delay(1);
+}

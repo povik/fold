@@ -441,7 +441,7 @@ class VarImplMutable(VarImpl):
                             stack_copy.append(p)
                     else:
                         stack_copy = []
-                    yield ((edge.tail, edge.tail in self.assigns, tuple(stack_copy)), edge)
+                    yield ((edge.tail, edge.tail in self.assigns or edge.tail is bi, tuple(stack_copy)), edge)
 
         assign_domain = self.find_assigned_domain(curr, succ_f)
 
@@ -454,6 +454,9 @@ class VarImplMutable(VarImpl):
 
         if curr == (bi, False, ()):
             return
+
+        if curr[0] == bi and curr[0] not in self.assigns:
+            return rtl.repeat(rtl.UNDEF, self.shape.bitlen), rtl.LOW
 
         if curr[1]:
             sig, en = self.assigns[curr[0]], rtl.HIGH
