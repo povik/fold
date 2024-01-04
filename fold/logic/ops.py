@@ -90,7 +90,7 @@ def _print_transform_fmt(fmtstring, args):
             signedness = b"s" if arg.shape.signed else b"u"
             ret += b"{" + b"%d" % arg.shape.bitlen + b":" + align + pad + \
                         (b"%d" % width if width != 0 else b"") + typech + \
-                        signedness + b"}"
+                        (signedness if verb != b"c" else b"") + b"}"
         elif ch == b"{":
             ret += b"{{"
         elif ch == b"}":
