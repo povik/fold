@@ -219,9 +219,9 @@ One way users annotate the program to influence the architecture is by inserting
 
 For each statement in the Fold program the circuitry implementing the statement counts among the exclusive resources the usage of which must be kept conflict-free. For the avoidance of conflicts the virtual clock cycle offset as we trace a viable execution of the program from a statement to itself cannot be zero.
 
-Now let's return to our RISC-V core and analyze the paths of execution there. We have a loop for instruction processing, and this of course results in paths of execution looping back to the same statement. Putting the loop aside, we then still need to consider paths starting at a statement in the `memio` body, returning to the site of the call to `memio`, proceeding to another call site and re-entering the function body from there.
+Now let's return to our RISC-V core and analyze the paths of execution there. We have a loop for instruction processing, and this of course results in paths of execution looping back to the same statement. In addition we need to consider paths starting at a statement in the `memio` body, returning to the call site, proceeding to another call site and re-entering the function body from there.
 
-In the loop body we have three occurences of a call to `memio`, but the second and the third call are mutually exclusive, so we need not consider paths between the two.
+In the loop body we have three occurences of a call to `memio`, but the second and the third call are mutually exclusive, so we don't need to consider paths between the two.
 
 Overall, to address any conflicts, we can put `delay(1);` statement just below the first `memio` call, and another `delay(1);` statement at the end of the loop body.
 
