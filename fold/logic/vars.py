@@ -907,7 +907,13 @@ class VarImplMutAddressable(BaseVarImpl):
 
         m = self.d.rtl_module
         shape = self.shape
-        m.add_memory(self.name, product(*shape.dims[:-1]), shape.finaldim)
+
+        attrs = {}
+        if hint("ramstyle"):
+            attrs["ramstyle"] = hint("ramstyle")
+        with rtl.SynthAttrContext(**attrs):
+            m.add_memory(self.name, product(*shape.dims[:-1]), shape.finaldim)
+
         m.add_memory(self.shadow_name + "_write_valid", product(*shape.dims[:-1]), 1)
         rtl.MEMINIT(m, self.shadow_name + "_write_valid",
             addr=rtl.Signal.from_bits([]),
