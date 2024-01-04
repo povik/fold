@@ -1088,7 +1088,7 @@ struct ImportsPass : Pass {
 
 				std::string varname = cell->name.str();
 				if (cell->attributes.count(ID(implements_variable)))
-					varname = cell->attributes[ID(implements_variable)].decode_string();
+					varname = cell->attributes[ID(implements_variable)].decode_string() + " (mut)";
 
 				std::string stalk = cell->getParam(ID(STALK)).decode_string();
 
