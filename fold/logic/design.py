@@ -854,41 +854,40 @@ class BlockSeq:
                     self.rewind(markers=(stat.markers[1], stat.markers[1]))
                     followup = self.curr
 
-                    if True:
-                        tseq = BlockSeq.from_ast_body(self.d, truebody, self.frame)
-                        to_tseq_entry = self.immutlink(premise, tseq.entry, hot=condsig)
-                        self.mutlink(premise, tseq.entry, to_tseq_entry, hot=rtl.HIGH)
+                    tseq = BlockSeq.from_ast_body(self.d, truebody, self.frame)
+                    to_tseq_entry = self.immutlink(premise, tseq.entry, hot=condsig)
+                    self.mutlink(premise, tseq.entry, to_tseq_entry, hot=rtl.HIGH)
 
-                        condsig_not = rtl.NOT(m, condsig)
+                    condsig_not = rtl.NOT(m, condsig)
 
-                        fseq = BlockSeq.from_ast_body(self.d, falsebody, self.frame)
-                        to_fseq_entry = self.immutlink(premise, fseq.entry, hot=condsig_not)
-                        self.mutlink(premise, fseq.entry, to_fseq_entry, hot=rtl.HIGH)
+                    fseq = BlockSeq.from_ast_body(self.d, falsebody, self.frame)
+                    to_fseq_entry = self.immutlink(premise, fseq.entry, hot=condsig_not)
+                    self.mutlink(premise, fseq.entry, to_fseq_entry, hot=rtl.HIGH)
 
-                        if True and (tseq.runthrough_simple and fseq.runthrough_simple):
-                            to_followup = self.immutlink(premise, followup)
+                    if True and (tseq.runthrough_simple and fseq.runthrough_simple):
+                        to_followup = self.immutlink(premise, followup)
+                        self.mutlink(tseq.exit, followup, tseq.runthrough.inv * to_tseq_entry.inv * to_followup,
+                                     hot=BlockImpl.en(tseq.exit))
+                        self.mutlink(fseq.exit, followup, fseq.runthrough.inv * to_fseq_entry.inv * to_followup,
+                                     hot=BlockImpl.en(fseq.exit))
+                    else:
+                        if tseq.runthrough_simple:
+                            to_followup = self.immutlink(premise, followup, hot=condsig)
                             self.mutlink(tseq.exit, followup, tseq.runthrough.inv * to_tseq_entry.inv * to_followup,
                                          hot=BlockImpl.en(tseq.exit))
+                        else:
+                            to_followup = self.immutlink(tseq.exit, followup)
+                            self.mutlink(tseq.exit, followup, to_followup,
+                                         hot=BlockImpl.en(tseq.exit))
+
+                        if fseq.runthrough_simple:
+                            to_followup = self.immutlink(premise, followup, hot=condsig_not)
                             self.mutlink(fseq.exit, followup, fseq.runthrough.inv * to_fseq_entry.inv * to_followup,
                                          hot=BlockImpl.en(fseq.exit))
                         else:
-                            if tseq.runthrough_simple:
-                                to_followup = self.immutlink(premise, followup, hot=condsig)
-                                self.mutlink(tseq.exit, followup, tseq.runthrough.inv * to_tseq_entry.inv * to_followup,
-                                             hot=BlockImpl.en(tseq.exit))
-                            else:
-                                to_followup = self.immutlink(tseq.exit, followup)
-                                self.mutlink(tseq.exit, followup, to_followup,
-                                             hot=BlockImpl.en(tseq.exit))
-
-                            if fseq.runthrough_simple:
-                                to_followup = self.immutlink(premise, followup, hot=condsig_not)
-                                self.mutlink(fseq.exit, followup, fseq.runthrough.inv * to_fseq_entry.inv * to_followup,
-                                             hot=BlockImpl.en(fseq.exit))
-                            else:
-                                to_followup = self.immutlink(fseq.exit, followup)
-                                self.mutlink(fseq.exit, followup, to_followup,
-                                             hot=BlockImpl.en(fseq.exit))
+                            to_followup = self.immutlink(fseq.exit, followup)
+                            self.mutlink(fseq.exit, followup, to_followup,
+                                         hot=BlockImpl.en(fseq.exit))
             elif stat[0] == "var":
                 with stat as (_, varlist):
                     for vardecl in varlist:
