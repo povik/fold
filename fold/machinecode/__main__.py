@@ -150,9 +150,15 @@ def recurse_on_highdims(f):
     return wrapper
 
 
-def check_nargs(argvals, expected):
-    if len(argvals) != expected:
+def check_nargs(args, expected):
+    if len(args) == expected \
+            or (type(expected) in (list, range) and len(args) in expected):
+        return
+
+    if type(expected) is int:
         raise ast.BadInput(f"operation requires {expected} arguments")
+    else:
+        raise ast.BadInput("bad number of arguments to operation")
 
 
 global_counter = 0
@@ -250,7 +256,7 @@ def builtin_assert_equal(b, argvals):
 
 @register_builtin_op("cover")
 def builtin_assert_equal(b, argvals):
-    check_nargs(argvals, 1)
+    check_nargs(argvals, [0, 1])
     # TODO
     return Value.VOID
 
