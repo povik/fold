@@ -145,6 +145,13 @@ def assert_equal(bseq, a, b):
         rtl.ASSERT(bseq.d.rtl_module, bseq.curr.en, eq_sig)
 
 
+@register_simple("cover")
+def cover(bseq, a):
+    with rtl.SynthAttrContext(src=markers_str(Tuple.curr_markers)):
+        cond = rtl.REDUCE_BOOL(bseq.d.rtl_module, a.extract_signal())
+        rtl.COVER(bseq.d.rtl_module, bseq.curr.en, cond)
+
+
 @register_simple("r")
 def r(bseq, arg):
     m = bseq.d.rtl_module

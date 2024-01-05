@@ -564,6 +564,13 @@ def ASSERT(m, en, a):
     )
 
 
+def COVER(m, en, a):
+    m.add_cell_keep("$cover",
+        ("\\EN", en),
+        ("\\A", a)
+    )
+
+
 def ADD(m, a, b, reswidth=None):
     reswidth = reswidth or (max(a.width, b.width) + 1)
     return m.operate("$add", a, b,
