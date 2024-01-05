@@ -24,7 +24,8 @@ build/fold.so: $(PASSES_OBJS)
 		-shared $^ --ldlibs
 
 test: build/fold.so
-	@for testcase in passes/tests/*.ys tests/*.ys; \
+	@code=0; \
+	for testcase in passes/tests/*.ys tests/*.ys; \
 	do \
 		TEXT=`head -n 1 $${testcase} | sed 's/^#\ //'`; \
 		echo -n "$${TEXT}... "; \
@@ -33,24 +34,26 @@ test: build/fold.so
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
 			$(YOSYS) -g -Q -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "script' $${testcase}"; \
 			echo; \
+			code=1; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
-	done
-	@echo "Target: machine code"
-	@for testcase in tests/programs/*.fold; \
+	done; \
+	echo "Target: machine code"; \
+	for testcase in tests/programs/*.fold; \
 	do \
 		echo -n "$${testcase}... "; \
 		if ! python3 -m fold.machinecode --jit-exec $${testcase} 1>/dev/null 2>&1; then \
 			echo -e "\e[31mFAIL\e[0m"; \
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
 			python3 -m fold.machinecode --jit-exec $${testcase}; \
+			code=1; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
-	done
-	@echo "Target: logic"
-	@for testcase in tests/programs/*.fold tests/programs/*.fold.disabled_mcode; \
+	done; \
+	echo "Target: logic"; \
+	for testcase in tests/programs/*.fold tests/programs/*.fold.disabled_mcode; \
 	do \
 		echo -n "$${testcase}... "; \
 		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -assert-cover -clock clk -reset rst" 1>/dev/null 2>&1; then \
@@ -58,34 +61,38 @@ test: build/fold.so
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
 			$(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -assert-cover -clock clk -reset rst"; \
 			echo; \
+			code=1; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
-	done
-	@echo "Target: frontend constant evaluator"
-	@for testcase in tests/programs/ops*.fold; \
+	done; \
+	echo "Target: frontend constant evaluator"; \
+	for testcase in tests/programs/ops*.fold; \
 	do \
 		echo -n "$${testcase}... "; \
 		if ! python3 -m fold.eval $${testcase} 1>/dev/null 2>&1; then \
 			echo -e "\e[31mFAIL\e[0m"; \
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
 			python3 -m fold.eval $${testcase}; \
+			code=1; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
-	done
-	@echo "Import feasibility test"
-	@for testcase in tests/import_feasibility/*.fold; \
+	done; \
+	echo "Import feasibility test"; \
+	for testcase in tests/import_feasibility/*.fold; \
 	do \
 		echo -n "$${testcase}... "; \
 		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth;" 1>/dev/null 2>&1; then \
 			echo -e "\e[31mFAIL\e[0m"; \
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
 			$(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth;"; \
+			code=1; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \
 		fi \
-	done
+	done; \
+	exit $${code}
 
 
 COVERAGE_ARGS = --rcfile=coverage.rc --branch --append --data-file build/python.coverage
