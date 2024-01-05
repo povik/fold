@@ -80,4 +80,6 @@ func entry()() {
 	pass(0x3, m[1]);
 }
 
+` wait.
 entry();
+cover();

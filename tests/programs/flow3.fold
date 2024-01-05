@@ -22,3 +22,4 @@ for N < 12 {
 	delay(1);
 }
 assert_equal(ret2, 40320);
+cover();

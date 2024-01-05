@@ -20,3 +20,4 @@ for N < 9 {
 	delay(1);
 }
 assert_equal(ret, 40320);
+cover();

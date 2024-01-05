@@ -53,10 +53,10 @@ test: build/fold.so
 	@for testcase in tests/programs/*.fold tests/programs/*.fold.disabled_mcode; \
 	do \
 		echo -n "$${testcase}... "; \
-		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -clock clk -reset rst" 1>/dev/null 2>&1; then \
+		if ! $(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -assert-cover -clock clk -reset rst" 1>/dev/null 2>&1; then \
 			echo -e "\e[31mFAIL\e[0m"; \
 			echo -e "Testcase \e[1m$${testcase}\e[0m failed"; \
-			$(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -clock clk -reset rst"; \
+			$(YOSYS) -m $(TARGET_PLUGIN_LIB) -m fold.logic.frontend.py -p "read_fold $${testcase}; fold_synth; read_verilog -sv support/mutex_assert.sv; hierarchy -top top; proc; memory_nordff; sim -n 100 -assert -assert-cover -clock clk -reset rst"; \
 			echo; \
 		else \
 			echo -e "\e[32mOK\e[0m"; \

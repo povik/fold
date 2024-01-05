@@ -20,3 +20,4 @@ assert_equal(v, 5*4*3*2*1);
 ` wait.
 v = factorial(7);
 assert_equal(v, 7*6*5*4*3*2*1);
+cover();

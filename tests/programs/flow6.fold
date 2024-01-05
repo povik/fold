@@ -18,3 +18,4 @@ test(2);
 delay(1);
 `wait.
 test(3);
+cover();

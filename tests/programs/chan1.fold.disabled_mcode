@@ -32,3 +32,4 @@ assert_equal(v, 0x55);
 ` wait.
 v = g->(6);
 assert_equal(v, 0);
+cover();

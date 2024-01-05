@@ -17,3 +17,4 @@ for k != 0x8000 {
 }
 
 assert_equal(j, 2 * 15);
+cover();
