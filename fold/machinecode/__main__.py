@@ -248,6 +248,13 @@ def builtin_assert_equal(b, argvals):
     return Value.VOID
 
 
+@register_builtin_op("cover")
+def builtin_assert_equal(b, argvals):
+    check_nargs(argvals, 1)
+    # TODO
+    return Value.VOID
+
+
 # here, ExprEvaluator gets a special version of the decorator
 def recurse_on_highdims2(f):
     def wrapper(self, arg1, arg2, *operands, **kwargs):
