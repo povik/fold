@@ -138,7 +138,7 @@ void spread_bgval(Module *m, CellTypes &ct, bool assert_consistence, bool writeb
 			}
 
 evaluable:
-			if (cell->type.in({ID($assert)}))
+			if (cell->type.in(ID($assert)))
 				continue;
 
 			if (!cell->hasPort(ID::Y))

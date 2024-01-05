@@ -16,18 +16,18 @@ struct timetravel_node {
 
 	timetravel_node(Cell *cell)
 			: cell(cell), bank() {
-		assert(!cell || !cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)}));
+		assert(!cell || !cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE)));
 	}
 
 	static timetravel_node perimeter;
 
 	static timetravel_node with_bank(Cell *cell, IdString bank) {
-		assert(cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)}));
+		assert(cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE)));
 		assert(bank == ID::A || bank == ID::B);
 		return timetravel_node(cell, bank);
 	}
 	timetravel_node partner() {
-		assert(cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)}));
+		assert(cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE)));
 		return with_bank(cell, bank == ID::A ? ID::B : ID::A);
 	}
 	bool is_perimeter() const {
@@ -200,7 +200,7 @@ struct timetravel_module {
 		: m(m), sigmap(sigmap), ct(ct), mask_undef_mux(mask_undef_mux)
 	{
 		for (auto cell : m->cells()) {
-			if (!cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)})) {
+			if (!cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 				register_node(timetravel_node(cell));
 			} else {
 				for (auto bank : { ID::A, ID::B })

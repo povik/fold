@@ -227,7 +227,7 @@ struct SeerTimetravelPass : Pass {
 					log_error("Unknown cell encountered: %s (%s)\n",
 							log_id(cell->name), log_id(cell->type));
 
-				if (!cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)})) {
+				if (!cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 					selected_nodes.insert(timetravel_node(cell));
 				} else {
 					for (auto bank : { ID::A, ID::B }) {
@@ -275,7 +275,7 @@ struct SeerTimetravelPass : Pass {
 							log_error("Unknown cell encountered: %s (%s)\n",
 									log_id(cell->name), log_id(cell->type));
 
-						if (!cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)})) {
+						if (!cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 							all_nodes.insert(timetravel_node(cell));
 						} else {
 							for (auto bank : { ID::A, ID::B }) {

@@ -73,7 +73,7 @@ struct BackedgeLowerPass : Pass {
 		for (argidx = 1; argidx < args.size(); argidx++) {
 			auto arg = args[argidx];
 			if (arg == "-select_port" && argidx + 1 < args.size() \
-					&& IdString(RTLIL::escape_id(args[++argidx])).in({ID::A, ID::B}))
+					&& IdString(RTLIL::escape_id(args[++argidx])).in(ID::A, ID::B))
 				port_selection = IdString(RTLIL::escape_id(args[argidx]));
 			else if (arg == "-oracle")
 				oracle = true;
@@ -186,14 +186,14 @@ struct PortalCheckPass : Pass {
 		for (auto cell : m->selected_cells()) {
 			bool cell_bad = false;
 
-			if (cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)})) {
+			if (cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 				cell_bad |= require_param(cell, ID(A_WIDTH));
 				cell_bad |= require_param(cell, ID(B_WIDTH));
 				cell_bad |= require_port(cell, ID(A));
 				cell_bad |= require_port(cell, ID(AY));
 				cell_bad |= require_port(cell, ID(B));
 				cell_bad |= require_port(cell, ID(BY));
-			} else if (cell->type.in({ID(SEER), ID(ORACLE)})) {
+			} else if (cell->type.in(ID(SEER), ID(ORACLE))) {
 				cell_bad |= require_param(cell, ID(WIDTH));
 				cell_bad |= require_port(cell, ID(A));
 				cell_bad |= require_port(cell, ID(Y));
@@ -207,12 +207,12 @@ struct PortalCheckPass : Pass {
 				continue;
 			}
 
-			if (cell->type.in({ID(TIMEPORTAL), ID(BACKEDGE)})) {
+			if (cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 				cell_bad |= check_size(cell, ID(A),  ID(A_WIDTH));
 				cell_bad |= check_size(cell, ID(AY), ID(A_WIDTH));
 				cell_bad |= check_size(cell, ID(B),  ID(B_WIDTH));
 				cell_bad |= check_size(cell, ID(BY), ID(B_WIDTH));
-			} else if (cell->type.in({ID(SEER), ID(ORACLE)})) {
+			} else if (cell->type.in(ID(SEER), ID(ORACLE))) {
 				cell_bad |= check_size(cell, ID(A), ID(WIDTH));
 				cell_bad |= check_size(cell, ID(Y), ID(WIDTH));
 			}
