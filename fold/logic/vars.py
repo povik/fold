@@ -15,13 +15,6 @@ from . import rtl, graphtools, execid
 from .graphtools import graph_property, successor_maximum
 
 
-def escape_id(s):
-    if not (s.startswith("$") or s.startswith("\\")):
-        return f"\\{s}"
-    else:
-        return s
-
-
 class BaseVarImpl:
     def __init__(self, f, varname, shape):
         assert isinstance(shape, Shape)
@@ -73,7 +66,7 @@ class VarImplSignal(VarImpl):
                     ("\\D", sig),
                     ("\\EN", en),
                     WIDTH=sig.width,
-                    AT_NODE=escape_id(bi.label),
+                    AT_NODE=bi.id,
                     NAMESPACE=self.f.namespace,
                     NAME=self.varname,
                 )
@@ -84,7 +77,7 @@ class VarImplSignal(VarImpl):
                     ("\\D", sig),
                     ("\\EN", rtl.HIGH),
                     WIDTH=sig.width,
-                    AT_NODE=escape_id(bi.label),
+                    AT_NODE=bi.id,
                     NAMESPACE=self.f.namespace,
                     NAME=self.varname,
                 )
@@ -93,7 +86,7 @@ class VarImplSignal(VarImpl):
             self.m.add_cell("\\VAR_GET",
                 ("\\Q", sig),
                 WIDTH=sig.width,
-                AT_NODE=escape_id(bi.label),
+                AT_NODE=bi.id,
                 NAMESPACE=self.f.namespace,
                 NAME=self.varname,
             )
@@ -274,8 +267,8 @@ class VarImplMutable(VarImpl):
                 WIDTH=bridged.width,
                 ZEROED=False,
                 NAMESPACE=self.f.namespace,
-                FROM_NODE=escape_id(edge.tail.label),
-                TO_NODE=escape_id(edge.head.label),
+                FROM_NODE=edge.tail.id,
+                TO_NODE=edge.head.id,
                 STALK=escape_stalk(edge.stalk),
             )
         return edge.hot, bridged
@@ -476,8 +469,8 @@ class VarImplMutable(VarImpl):
                 WIDTH=bridged.width,
                 ZEROED=False,
                 NAMESPACE=self.f.namespace,
-                FROM_NODE=escape_id(curr[0].label),
-                TO_NODE=escape_id(bi.label),
+                FROM_NODE=curr[0].id,
+                TO_NODE=bi.id,
                 STALK=escape_stalk(gc),
             )
         hot = rtl.OR(self.m, *[edge.hot for edge in self.f.mutlinks.walk_heads(bi)])
@@ -808,14 +801,14 @@ class VarImplAddressable(BaseVarImpl):
         self.m.add_cell("\\VAR_GET",
             ("\\Q", retwire_execid),
             WIDTH=ei_width,
-            AT_NODE=escape_id(bi.label),
+            AT_NODE=bi.id,
             NAMESPACE=self.f.namespace,
             NAME=f"${self.varname}_impldata_execid",
         )
         self.m.add_cell("\\VAR_GET",
             ("\\Q", retwire),
             WIDTH=desc.datalen - ei_width,
-            AT_NODE=escape_id(bi.label),
+            AT_NODE=bi.id,
             NAMESPACE=self.f.namespace,
             NAME=f"${self.varname}_impldata",
         )
@@ -853,7 +846,7 @@ class VarImplAddressable(BaseVarImpl):
                         ("\\D", spliced[:ei_width]),
                         ("\\EN", en),
                         WIDTH=ei_width,
-                        AT_NODE=escape_id(bi.label),
+                        AT_NODE=bi.id,
                         NAMESPACE=self.f.namespace,
                         NAME=f"${self.varname}_impldata_execid",
                     )
@@ -863,7 +856,7 @@ class VarImplAddressable(BaseVarImpl):
                         ("\\D", spliced[ei_width:]),
                         ("\\EN", en),
                         WIDTH=self.desc().datalen - ei_width,
-                        AT_NODE=escape_id(bi.label),
+                        AT_NODE=bi.id,
                         NAMESPACE=self.f.namespace,
                         NAME=f"${self.varname}_impldata",
                     )

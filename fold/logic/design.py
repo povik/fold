@@ -22,7 +22,7 @@ class BlockImpl:
     def __init__(self, frame, label="", markers=None):
         self.markers = markers or Tuple.curr_markers
         self.frame = frame
-        self._label = label
+        self.label = label if label != "" else f"${frame.d.make_up_id()}"
 
         self.en = frame.d.rtl_module.add_wire(f"$en${label}", 1,
                                               **{'seer.background_value': rtl.Const.from_const(0, 1)})
@@ -39,13 +39,12 @@ class BlockImpl:
     	return markers_str(self.markers)
 
     @property
-    def label(self):
+    def full_label(self):
         prefix = self.f.namespace.replace(" ", ".")
-        return prefix + "." + \
-            (self._label.replace(" ", "") or (self.src.replace(" ", "") if self.src != "" else "unk"))
+        return prefix + "." + self.label.replace(" ", "")
 
     def __repr__(self):
-        return "<blockimpl %s>" % self.label
+        return "<blockimpl %s>" % self.full_label
 
     def build(self):
         m = self.frame.design.rtl_module
@@ -56,7 +55,7 @@ class BlockImpl:
                                             self.execid_sources, width=ei_width))
 
         with rtl.SynthAttrContext(fold_debug=True,
-                                  for_blockimpl=self.label,
+                                  for_blockimpl=self.full_label,
                                   src=self.src):
             m.add_cell_keep(
                 "\\MUTEX_ASSERT",
@@ -71,6 +70,13 @@ class BlockImpl:
         if bimpl is None:
             return None
         return bimpl.en
+
+    @property
+    def id(self):
+        '''
+        ID for this node to use in the emitted circuit
+        '''
+        return escape_id(self.full_label)
 
 class ImmutLink(Edge):
     EP1_PROPS = ('hot', '_xfer')
@@ -110,14 +116,10 @@ class ImmutLink(Edge):
 
 
 class Frame:
-    FRAME_COUNTER = 0
-
     def __init__(self, design, parent, framename=""):
-        if not framename:
-            self.framename = f"${self.FRAME_COUNTER}"
-        else:
-            self.framename = f"{framename}${self.FRAME_COUNTER}"
-        type(self).FRAME_COUNTER += 1
+        if framename == "":
+            framename = f"${design.make_up_id()}"
+        self.framename = framename
         self.design = design
         self.parent_frame = parent
         if parent:
@@ -145,7 +147,7 @@ class Frame:
         m.add_cell("\\VAR_GET",
             ("\\Q", retwire),
             WIDTH=retwire.width,
-            AT_NODE=escape_id(bi.label),
+            AT_NODE=bi.id,
             NAMESPACE=self.namespace,
             NAME=f"$execid",
         )
@@ -494,8 +496,7 @@ class BlockSeqTransform(Transform):
             ZEROED=zeroed,
             NAMESPACE=self.bseq.frame.namespace,
             STALK="*",
-            FROM_NODE=escape_id(a.label),
-            TO_NODE=escape_id(b.label),
+            FROM_NODE=a.id, TO_NODE=b.id,
         )
         return imported
 
@@ -509,7 +510,7 @@ class BlockSeq:
         self.f = self.frame = Frame(d, parent=parent_frame,
                                     framename=framename)
         self.f.is_function = is_function
-        self.rewind()
+        self.rewind("%entry")
         self.entry = self.curr
         self._exit = None
         self.finalized = False
@@ -530,11 +531,14 @@ class BlockSeq:
 
     @property
     def exit(self):
+        assert self.finalized
         return self._exit
 
     def finalize(self):
         self.finalized = True
         self._exit = self.curr
+        if self.exit is not None:
+            self.exit.label = "%exit"
 
     @property
     def runthrough_simple(self):
@@ -631,7 +635,7 @@ class BlockSeq:
                             ("\\D", execid_wip),
                             ("\\EN", trigger_xformed),
                             WIDTH=execid_wip.width,
-                            AT_NODE=escape_id(b.label),
+                            AT_NODE=b.id,
                             NAMESPACE=f_.namespace,
                             NAME=f"$execid",
                         )
@@ -847,9 +851,6 @@ class BlockSeq:
                 with stat as (_, cond, truebody, falsebody):
                     condsig = self.eval_cond(cond)
 
-                    if self.curr._label:
-                        condsig = rtl.label_signal(m, condsig, f"$condsig_{self.curr.label}")
-
                     premise = self.curr
                     self.rewind(markers=(stat.markers[1], stat.markers[1]))
                     followup = self.curr
@@ -1049,6 +1050,11 @@ class Design:
         self.rtl_module = rtl_module
         self.create_clk_rst_ports()
         self.execid_width = 128
+        self._ids_counter = 0
+
+    def make_up_id(self):
+        self._ids_counter += 1
+        return self._ids_counter
 
     def create_clk_rst_ports(self):
         m = self.rtl_module
@@ -1095,7 +1101,7 @@ class Design:
             ("\\D", execid_zero),
             ("\\EN", rtl.HIGH),
             WIDTH=execid_zero.width,
-            AT_NODE=escape_id(top_seq.entry.label),
+            AT_NODE=top_seq.entry.id,
             NAMESPACE=top_seq.frame.namespace,
             NAME=f"$execid",
         )
@@ -1105,7 +1111,6 @@ class Design:
         self.top_frame = seq.frame
         seq.impl_ast_body(body)
         seq.finalize()
-        seq.entry._label = "entry"
         self._impl_crank(seq)
 
     def _impl_func(self, opname, name):
@@ -1138,11 +1143,6 @@ class Design:
                 parent_frame=parent,
                 framename=name,
                 function=True)
-            if seq.entry != seq.exit:
-                seq.entry._label = "%s entry" % name
-                seq.exit._label = "%s exit" % name
-            else:
-                seq.entry._label = name
             if hint_pre("io"):
                 m = self.rtl_module
                 ovalid = m.add_wire(f"\\{name}_ovalid", 1)
@@ -1333,7 +1333,7 @@ class Design:
 
         d = "immutlinks\n"
         for node in self.top_frame.immutlinks.nodes:
-            d += f"node {escape_id(node.label)}\n"
+            d += f"node {node.id}\n"
             d += f"\tns {' '.join(namespaces[node] + [''])}end\n"
             assert isinstance(node.en, rtl.Wire)
             d += f"\ten {escape_id(node.en.name)} end\n"
@@ -1342,7 +1342,7 @@ class Design:
                 d += f"\tsrc '{escaped_src}'\n"
             d += f"end\n"
         for edge in self.top_frame.immutlinks.edges:
-            d += f"edge {escape_id(edge.ep1.label)} {escape_id(edge.ep2.label)}\n"
+            d += f"edge {edge.ep1.id} {edge.ep2.id}\n"
             d += f"\tns {' '.join(namespaces[edge] + [''])}end\n"
             assert edge.hot_back is rtl.LOW
             if not (isinstance(edge.hot, rtl.Const) and edge.hot.bits == [rtl.BitState.S1]):
@@ -1361,7 +1361,7 @@ class Design:
             elif isinstance(edge._xfer, BlockSeqTransform):
                 xfer = edge._xfer
                 assert not xfer.inversed
-                d += f"\tbseq {escape_id(xfer.bseq.entry.label)} {escape_id(xfer.bseq.exit.label)}\n"
+                d += f"\tbseq {xfer.bseq.entry.id} {xfer.bseq.exit.id}\n"
             else:
                 raise NotImplementedError(type(edge._xfer))
 
