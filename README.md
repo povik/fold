@@ -6,7 +6,7 @@ Fold is an experimental language and compiler for synthesis of digital circuits 
 
 Some features:
 
- * Users input high level description of the desired behavior in the form of a program. This program resembles C syntax in its form, supports variables of arbitrary bitwidth, and has arithmetic operators defined to never overflow.
+ * Users input high level description of the desired behavior in the form of a program. This program resembles C syntax in its form, supports variables of arbitrary bitwidth, and has arithmetic operators with sizing rules to never overflow.
 
  * Choice of architecture is up to the user and does not involve heuristics. Users annotate the program through special syntax and statements to influence the architecture.
 
