@@ -68,7 +68,7 @@ class BlockImpl:
     @classmethod
     def en(self, bimpl):
         if bimpl is None:
-            return None
+            return rtl.LOW
         return bimpl.en
 
     @property
