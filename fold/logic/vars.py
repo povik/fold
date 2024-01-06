@@ -278,7 +278,7 @@ class VarImplMutable(VarImpl):
             self._mux_import(inward)
             for inward in self.f.mutlinks.walk_heads(bi)
         ]
-        src = f"forwarding variable '{self.varname}'" \
+        src = f"forwarding variable '{self.varname}' (mut)" \
               + (f" at {bi.src}" if bi.src != "" else "")
         with rtl.SynthAttrContext(src=src):
             return rtl.build_mux(self.m, cases, width=self.shape.bitlen)
