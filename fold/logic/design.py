@@ -804,10 +804,14 @@ class BlockSeq:
     def eval_cond(self, ast):
         m = self.d.rtl_module
         seq = BlockSeq(self.d, self.f)
-        stalk = self.immutlink(self.curr, seq.entry)
-        self.mutlink(self.curr, seq.entry, stalk, hot=rtl.HIGH)
         cond_sig = rtl.REDUCE_BOOL(m, seq.eval(ast).extract_signal())
         seq.finalize()
+        opening = self.curr
+        entry_stalk = self.immutlink(opening, seq.entry)
+        self.mutlink(opening, seq.entry, entry_stalk, hot=rtl.HIGH)
+        closing = self.rewind(f"{self.curr.label}$past_conditional")
+        to_closing_stalk = self.immutlink(opening, closing)
+        self.mutlink(seq.exit, closing, seq.runthrough.inv * entry_stalk.inv * to_closing_stalk, hot=rtl.HIGH)
         with rtl.SynthAttrContext(src=markers_str(ast.markers)):
             rtl.ASSERT(m,
                 self.curr.en,
@@ -953,6 +957,7 @@ class BlockSeq:
                                      inject_labels={"%break": arrive})
                                      for _ in range(unroll)]
                     cnodes = [None] * unroll
+                    cnodes_exit = [None] * unroll
                     if have_cond:
                         csigs = [None] * unroll
                         with cond:
@@ -961,14 +966,16 @@ class BlockSeq:
                                         + (f"_rib_{rib}" if unroll > 1 else "")
                                 cnodes[rib] = self.rewind(label=label)
                                 csigs[rib] = csig = self.eval_cond(cond)
+                                cnodes_exit[rib] = self.curr
                                 to_body_entry = self.immutlink(self.curr, body_replicas[rib].entry, hot=csig)
-                                self.mutlink(self.curr, body_replicas[rib].entry,
-                                             to_body_entry, hot=rtl.AND(m, csig, self.curr.en))
+                                self.mutlink(self.curr, body_replicas[rib].entry, to_body_entry,
+                                             hot=rtl.AND(m, csig, self.curr.en))
 
                         label = (f"{markers_str(Tuple.curr_markers)}_first_condition").replace(" ", "")
                         first_cnode = self.rewind(label=label)
                         self.mutlink(depart, self.curr, self.immutlink(depart, self.curr), hot=rtl.HIGH)
                         first_csig = self.eval_cond(cond)
+                        first_cnode_exit = self.curr
                         to_body_entry = self.immutlink(self.curr, body_replicas[0].entry, hot=first_csig)
                         self.mutlink(self.curr, body_replicas[0].entry, to_body_entry,
                                      hot=rtl.AND(m, first_csig, first_cnode.en))
@@ -986,13 +993,13 @@ class BlockSeq:
                                      hot=period_xform(body_replicas[rib].exit.en, True))
 
                     self.rewind_to(arrive)
-                    to_arrive = self.immutlink(first_cnode, self.curr,
+                    to_arrive = self.immutlink(first_cnode_exit, self.curr,
                                                hot=rtl.NOT(m, first_csig))
-                    self.mutlink(first_cnode, self.curr, to_arrive,
+                    self.mutlink(first_cnode_exit, self.curr, to_arrive,
                                  hot=rtl.AND(m, first_cnode.en, rtl.NOT(m, first_csig)))
 
                     for rib in range(unroll):
-                        node = cnodes[rib]
+                        node = cnodes_exit[rib]
                         cond_to_curr = self.immutlink(node, self.curr,
                                                       hot=rtl.NOT(m, csigs[rib]))
                         self.mutlink(node, self.curr, cond_to_curr,

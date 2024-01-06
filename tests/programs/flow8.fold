@@ -1,0 +1,13 @@
+var j [4] mut;
+j = 0;
+
+func test() [1] {
+	j = j + 1;
+	ret = j < 10;
+}
+
+for test() {
+	delay(1);
+}
+
+cover();
