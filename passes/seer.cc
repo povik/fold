@@ -107,6 +107,9 @@ struct SeerStatPass : Pass {
 				bitoffsets[upstream.bit] = std::max(bitoffsets[upstream.bit],
 														-upstream.offset);
 			}
+
+			for (auto pair : bitoffsets)
+				nunique_seerbits2 += pair.second;
 		}
 
 		log("   Number of seers:               %6d\n", nseers);
