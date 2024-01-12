@@ -9,6 +9,7 @@ import signal
 import argparse
 import pathlib
 import llvmlite.ir as ir
+import llvmlite.ir.builder
 import llvmlite.binding as llvm
 from functools import cache, reduce
 from contextlib import contextmanager
@@ -20,6 +21,15 @@ from ..shape import Shape
 from ..utils import log2ceil
 
 from . import irhelpers
+
+
+@llvmlite.ir.builder._unop('freeze')
+def llvm_freeze(builder, value, name='', flags=()):
+    '''
+    Builder function to emit "freeze" instructions in LLVM IR (this is a workaround
+    for missing a method on llvmlite `Builder` class)
+    '''
+    pass
 
 
 def ir_type(shape):
@@ -241,8 +251,8 @@ def builtin_assert_equal(b, argvals):
     common_type = Shape.common(arg1.shape, arg2.shape)
 
     eq = irhelpers.recursive_eq(b,
-        arg1.recast(b, common_type).ir,
-        arg2.recast(b, common_type).ir
+        llvm_freeze(b, arg1.recast(b, common_type).ir),
+        llvm_freeze(b, arg2.recast(b, common_type).ir)
     )
 
     abort_f = irhelpers.declare_function(b, "abort",
