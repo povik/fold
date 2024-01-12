@@ -380,7 +380,7 @@ def tokens(chars, input_name="input"):
                          for x in special)):
             ret += next(inp)
         if ret not in special:
-            raise Exception("token '%s' not understood" % ret)
+            raise ValueError("token '%s' not understood" % ret)
         return ret
 
     specials_first_chars = "".join(list(set([s[0] for s in special])))
