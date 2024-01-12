@@ -217,7 +217,7 @@ def read_tsv(bseq, expr):
                 columns = 0
                 for val in line.split():
                     columns += 1
-                    data += int(val).to_bytes(4, byteorder="little")
+                    data += int(val).to_bytes(4, byteorder="little", signed=True)
     except FileNotFoundError:
         raise BadInput("file not found: {:h}", filename)
 
