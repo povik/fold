@@ -731,6 +731,8 @@ class Frame:
 
     def impl_var(self, vardecl):
         with vardecl as (varname, shapenode):
+            if varname in self.vars:
+                raise ast.BadInput("duplicate variable '{:h}' in this scope", varname)
             shape = self.d.eval_shape(shapenode)
             self.vars[varname] = var = VarImpl(self, varname, shape)
 

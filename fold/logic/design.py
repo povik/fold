@@ -184,6 +184,8 @@ class Frame:
 
     def impl_var(self, vardecl, injected=False):
         with vardecl as (varname, shapenode):
+            if varname in self.vars:
+                raise BadInput("duplicate variable '{:h}' in this scope", varname)
             shape, mutable = self.d.eval_shape(shapenode)
             if not mutable:
                 if hint("global"):
