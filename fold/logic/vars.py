@@ -171,13 +171,8 @@ class VarImplMutableGlobal(VarImpl):
         val, hot = rtl.build_mux(m, cases, width=self.shape.bitlen)
 
         with rtl.SynthAttrContext(fold_debug=True):
-            m.add_cell_keep(
-                "\\MUTEX_ASSERT",
-                ("\\CLK", self.f.d.rtl_clk),
-                ("\\A", rtl.concat(*[en for en, _ in cases])),
-                WIDTH=len(cases),
-                MESSAGE=f"write to {self.varname!s}",
-            )
+            rtl.MUTEX_ASSERT(m, self.f.d.rtl_clk, [en for en, _ in cases],
+                             f"write to {self.varname!s}")
 
         val_q = rtl.DFF(m, clk, val, en=hot)
 

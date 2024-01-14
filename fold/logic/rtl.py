@@ -837,6 +837,18 @@ def wrap_in_timeportal2(m, bank_a_domain=None, bank_a_constraint=None,
     return mapped_ports
 
 
+def MUTEX_ASSERT(m, clk, a, message=""):
+    if type(a) is list:
+        a = concat(*a)
+    m.add_cell_keep(
+        "\\MUTEX_ASSERT",
+        ("\\CLK", clk),
+        ("\\A", a),
+        WIDTH=a.width,
+        MESSAGE=message,
+    )
+
+
 class TestSignals(unittest.TestCase):
     def test_to_bits_n_back(self):
         d = Design()

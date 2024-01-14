@@ -54,16 +54,10 @@ class BlockImpl:
             m.connect(self.execid, rtl.PMUX(m, self.en_sources,
                                             self.execid_sources, width=ei_width))
 
-        with rtl.SynthAttrContext(fold_debug=True,
-                                  for_blockimpl=self.full_label,
+        with rtl.SynthAttrContext(for_blockimpl=self.full_label,
                                   src=self.src):
-            m.add_cell_keep(
-                "\\MUTEX_ASSERT",
-                ("\\CLK", self.frame.d.rtl_clk),
-                ("\\A", rtl.concat(*self.en_sources)),
-                WIDTH=len(self.en_sources),
-                MESSAGE=f"activation of {self!s}",
-            )
+            clk = self.frame.design.rtl_clk
+            rtl.MUTEX_ASSERT(m, clk, self.en_sources, f"activation of {self!s}")
 
     @classmethod
     def en(self, bimpl):
