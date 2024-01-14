@@ -154,11 +154,15 @@ class Frame:
         return retwire
 
     @property
+    def frame_hierarchy(self):
+        yield self
+        yield from self.children_recursive
+
+    @property
     def children_recursive(self):
-        return self.children_frames.union(set([
-            grandchild for child in self.children_frames
-            for grandchild in child.children_recursive
-        ]))
+        for child in self.children_frames:
+            yield child
+            yield from child.children_recursive
 
     @classmethod
     def common_parent(self, a, b):
@@ -1036,6 +1040,66 @@ def escape_id(s):
         return s
 
 
+def format_immutlinks(top_frame, rtl_module):
+    namespaces = dict()
+
+    for f in top_frame.frame_hierarchy:
+        ns = list(reversed([escape_id(f_.framename) for f_ in f.stack]))[1:]
+        for edge in f.immutlinks.edges:
+            namespaces[edge] = ns
+            namespaces[edge.rev] = ns
+        for node in f.immutlinks.nodes:
+            namespaces[node] = ns
+
+    d = "immutlinks\n"
+    for node in top_frame.immutlinks.nodes:
+        d += f"node {node.id}\n"
+        d += f"\tns {' '.join(namespaces[node] + [''])}end\n"
+        assert isinstance(node.en, rtl.Wire)
+        d += f"\ten {escape_id(node.en.name)} end\n"
+        if node.src != "":
+            escaped_src = node.src.replace("'", "\\'")
+            d += f"\tsrc '{escaped_src}'\n"
+        d += f"end\n"
+    for edge in top_frame.immutlinks.edges:
+        d += f"edge {edge.ep1.id} {edge.ep2.id}\n"
+        d += f"\tns {' '.join(namespaces[edge] + [''])}end\n"
+        assert edge.hot_back is rtl.LOW
+        if not (isinstance(edge.hot, rtl.Const) and edge.hot.bits == [rtl.BitState.S1]):
+            if edge.hot == rtl.LOW:
+                zwire = rtl_module.add_wire("$zero", 1)
+                rtl_module.connect(zwire, rtl.LOW)
+                d += f"\thot {escape_id(zwire.name)} end\n"
+            else:
+                assert isinstance(edge.hot, rtl.Wire)
+                d += f"\thot {escape_id(edge.hot.name)} end\n"
+
+        if isinstance(edge._xfer, Id):
+            pass
+        elif isinstance(edge._xfer, FixedOffset):
+            d += f"\toffset {edge._xfer.offset}\n"
+        elif isinstance(edge._xfer, BlockSeqTransform):
+            xfer = edge._xfer
+            assert not xfer.inversed
+            d += f"\tbseq {xfer.bseq.entry.id} {xfer.bseq.exit.id}\n"
+        else:
+            raise NotImplementedError(type(edge._xfer))
+
+        if edge.threshold is not None:
+            d += f"\tphantom_threshold {edge.threshold.depth}\n"
+
+        elem = top_frame.immutlinks._link_fg_eles[edge]
+
+        if elem == Identity():
+            d += f"\tin_spantree\n"
+        else:
+            d += f"\tfg_element '{elem.label}'\n"
+
+        d += f"end\n"    
+
+    return d
+
+
 def fixup_goto_imprints(self):
     common = Frame.common_parent(self.tail.f, self.head.f)
     level = len(list(common.stack))
@@ -1330,62 +1394,8 @@ class Design:
         for bi in self.blockimpls:
             bi.build()
 
-        namespaces = dict()
-
-        for f in self.all_frames:
-            ns = list(reversed([escape_id(f_.framename) for f_ in f.stack]))[1:]
-            for edge in f.immutlinks.edges:
-                namespaces[edge] = ns
-                namespaces[edge.rev] = ns
-            for node in f.immutlinks.nodes:
-                namespaces[node] = ns
-
-        d = "immutlinks\n"
-        for node in self.top_frame.immutlinks.nodes:
-            d += f"node {node.id}\n"
-            d += f"\tns {' '.join(namespaces[node] + [''])}end\n"
-            assert isinstance(node.en, rtl.Wire)
-            d += f"\ten {escape_id(node.en.name)} end\n"
-            if node.src != "":
-                escaped_src = node.src.replace("'", "\\'")
-                d += f"\tsrc '{escaped_src}'\n"
-            d += f"end\n"
-        for edge in self.top_frame.immutlinks.edges:
-            d += f"edge {edge.ep1.id} {edge.ep2.id}\n"
-            d += f"\tns {' '.join(namespaces[edge] + [''])}end\n"
-            assert edge.hot_back is rtl.LOW
-            if not (isinstance(edge.hot, rtl.Const) and edge.hot.bits == [rtl.BitState.S1]):
-                if edge.hot == rtl.LOW:
-                    zwire = self.rtl_module.add_wire("$zero", 1)
-                    self.rtl_module.connect(zwire, rtl.LOW)
-                    d += f"\thot {escape_id(zwire.name)} end\n"
-                else:
-                    assert isinstance(edge.hot, rtl.Wire)
-                    d += f"\thot {escape_id(edge.hot.name)} end\n"
-
-            if isinstance(edge._xfer, Id):
-                pass
-            elif isinstance(edge._xfer, FixedOffset):
-                d += f"\toffset {edge._xfer.offset}\n"
-            elif isinstance(edge._xfer, BlockSeqTransform):
-                xfer = edge._xfer
-                assert not xfer.inversed
-                d += f"\tbseq {xfer.bseq.entry.id} {xfer.bseq.exit.id}\n"
-            else:
-                raise NotImplementedError(type(edge._xfer))
-
-            if edge.threshold is not None:
-                d += f"\tphantom_threshold {edge.threshold.depth}\n"
-
-            elem = self.top_frame.immutlinks._link_fg_eles[edge]
-
-            if elem == Identity():
-                d += f"\tin_spantree\n"
-            else:
-                d += f"\tfg_element '{elem.label}'\n"
-
-            d += f"end\n"
-        self.rtl_module.ym.design.scratchpad_set_string("immutlinks", d)
+        self.rtl_module.ym.design.scratchpad_set_string("immutlinks",
+            format_immutlinks(self.top_frame, self.rtl_module))
 
     @property
     def all_frames(self):
