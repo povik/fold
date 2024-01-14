@@ -1156,16 +1156,10 @@ class Design:
     def _impl_crank(self, top_seq):
         m = self.rtl_module
         crank = m.add_wire("\\crank", 1)
-        m.add_cell("$sdff",
-            ("\\D", rtl.LOW),
-            ("\\Q", crank),
-            ("\\CLK", self.rtl_clk),
-            ("\\SRST", self.rtl_rst),
-            CLK_POLARITY=True,
-            SRST_POLARITY=True,
-            WIDTH=1,
-            SRST_VALUE=True,
-        )
+        m.connect(crank, rtl.DFF(m,
+            clk=self.rtl_clk, rst=self.rtl_rst,
+            d=rtl.LOW, rst_value=rtl.HIGH
+        ))
         top_seq.entry.en_sources.append(crank)
         execid_zero = execid.ZERO(m, crank, width=self.execid_width)
         top_seq.entry.execid_sources.append(execid.DESCEND(m, execid_zero, crank))
