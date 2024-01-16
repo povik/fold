@@ -849,6 +849,16 @@ def MUTEX_ASSERT(m, clk, a, message=""):
     )
 
 
+def PLACEHOLDER(m, width):
+    ret = m.add_wire("$placeholder", width)
+    m.add_cell(
+        "\\PLACEHOLDER",
+        ("\\Y", ret),
+        WIDTH=ret.width
+    )
+    return ret
+
+
 class TestSignals(unittest.TestCase):
     def test_to_bits_n_back(self):
         d = Design()
