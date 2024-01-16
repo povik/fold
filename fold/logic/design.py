@@ -420,6 +420,8 @@ class Transform:
     def inv(self):
         raise NotImplementedError
 
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class Id(Transform):
