@@ -72,6 +72,47 @@ class BlockImpl:
         '''
         return escape_id(self.full_label)
 
+    @classmethod
+    def link(self, a, b, hot, transform, do_not_set_frameid=False,
+             execid_fork=False, inject_execid=None):
+        trigger = rtl.AND(a.f.d.rtl_module, a.en, hot)
+        trigger_xformed = transform(trigger, zeroed=True)
+        b.en_sources.append(trigger_xformed)
+
+        if inject_execid is None:
+            assert a.f.d is b.f.d
+            m = a.f.d.rtl_module
+
+            execid_wip = transform(a.execid)
+            bumped_execid = False
+            for f_ in a.frame.stack:
+                if f_ not in b.frame.stack:
+                    assert not f_.is_function # TODO: add execid support for jumping out of function bodies
+                    execid_wip = execid.ASCEND(m, execid_wip, trigger_xformed)
+                    bumped_execid = True
+            if execid_fork:
+                execid_wip = execid.FORK(m, execid_wip, trigger_xformed)
+            for f_ in b.frame.stack:
+                if f_ not in a.frame.stack:
+                    assert not f_.is_function # TODO: add execid support for jumping into function bodies
+                    if not do_not_set_frameid:
+                        m.add_cell("\\VAR_SET",
+                            ("\\D", execid_wip),
+                            ("\\EN", trigger_xformed),
+                            WIDTH=execid_wip.width,
+                            AT_NODE=b.id,
+                            NAMESPACE=f_.namespace,
+                            NAME=f"$execid",
+                        )
+                    execid_wip = execid.DESCEND(m, execid_wip, trigger_xformed)
+                    bumped_execid = True
+            if not bumped_execid:
+                execid_wip = execid.INC(m, execid_wip, trigger_xformed)
+            b.execid_sources.append(execid_wip)
+        else:
+            b.execid_sources.append(inject_execid)
+
+
 class ImmutLink(Edge):
     EP1_PROPS = ('hot', '_xfer')
     EP2_PROPS = ('hot_back', '_xfer_back')
@@ -595,13 +636,13 @@ class BlockSeq:
             self.exit, self.frame.immutlinks,
             mask=lambda e: e.applies_in_frame(self.frame))
 
-    def immutlink(self, a, b, hot=None, transform=Id(), do_not_set_frameid=False, execid_fork=False,
-                  inject_execid=None):
+    def immutlink(self, a, b, hot=None, transform=Id(), **kwargs):
         if a is None or b is None:
             return Identity()
-
         if hot is None:
             hot = rtl.HIGH
+
+        BlockImpl.link(a, b, hot, transform, **kwargs)
 
         for f in self.frame.stack:
             if not (a in f.immutlinks.nodes and b in f.immutlinks.nodes):
@@ -610,46 +651,7 @@ class BlockSeq:
                 # happens, we need to skip some tip of the stack here.
                 continue
             break
-
-        m = self.d.rtl_module
-
-        trigger = rtl.AND(m, a.en, hot)
-        trigger_xformed = transform(trigger, zeroed=True)
-        b.en_sources.append(trigger_xformed)
-
-        if inject_execid is None:
-            execid_wip = transform(a.execid)
-            bumped_execid = False
-            for f_ in a.frame.stack:
-                if f_ not in b.frame.stack:
-                    assert not f_.is_function # TODO: add execid support for jumping out of function bodies
-                    execid_wip = execid.ASCEND(m, execid_wip, trigger_xformed)
-                    bumped_execid = True
-            if execid_fork:
-                execid_wip = execid.FORK(m, execid_wip, trigger_xformed)
-            for f_ in b.frame.stack:
-                if f_ not in a.frame.stack:
-                    assert not f_.is_function # TODO: add execid support for jumping into function bodies
-                    if not do_not_set_frameid:
-                        m.add_cell("\\VAR_SET",
-                            ("\\D", execid_wip),
-                            ("\\EN", trigger_xformed),
-                            WIDTH=execid_wip.width,
-                            AT_NODE=b.id,
-                            NAMESPACE=f_.namespace,
-                            NAME=f"$execid",
-                        )
-                    execid_wip = execid.DESCEND(m, execid_wip, trigger_xformed)
-                    bumped_execid = True
-            if not bumped_execid:
-                execid_wip = execid.INC(m, execid_wip, trigger_xformed)
-            b.execid_sources.append(execid_wip)
-        else:
-            b.execid_sources.append(inject_execid)
-
-        link = ImmutLink(
-            a, b, hot, transform, rtl.LOW, transform.inv
-        )
+        link = ImmutLink(a, b, hot, transform, rtl.LOW, transform.inv)
         return f.immutlinks.link(link)
 
     def immutlink_phantom(self, a, b, hot=None, transform=Id(), threshold=None):
@@ -658,9 +660,7 @@ class BlockSeq:
             return Identity()
         if hot is None:
             hot = rtl.HIGH
-        link = ImmutLink(
-            a, b, hot, transform, rtl.LOW, transform.inv
-        )
+        link = ImmutLink(a, b, hot, transform, rtl.LOW, transform.inv)
         link.threshold = threshold
         return self.frame.immutlinks.link(link, forceelem=True)
 
