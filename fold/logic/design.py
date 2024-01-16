@@ -417,19 +417,12 @@ class BlockSeqEval(CombinatorialEvaluator):
 
 class Transform:
     @property
-    def has_inv(self):
-        return False
-
-    @property
     def inv(self):
         raise NotImplementedError
 
 
-class Id(Transform):
-    @property
-    def has_inv(self):
-        return True
 
+class Id(Transform):
     @property
     def inv(self):
         return self
@@ -446,10 +439,6 @@ class FixedOffset(Transform):
     def __init__(self, m, offset):
         self.m = m
         self.offset = offset
-
-    @property
-    def has_inv(self):
-        return True
 
     @property
     def inv(self):
@@ -474,10 +463,6 @@ class BackedgePortal(Transform):
             B_WIDTH=0,
         )
         self._is_inv = False
-
-    @property
-    def has_inv(self):
-        return True
 
     @property
     def inv(self):
@@ -509,10 +494,6 @@ class BlockSeqTransform(Transform):
         self.bseq = bseq
         self.inversed = inversed
         self._canon_inv = None
-
-    @property
-    def has_inv(self):
-        return True
 
     @property
     def inv(self):
