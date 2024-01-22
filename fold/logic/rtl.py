@@ -147,6 +147,16 @@ class Module:
     def name(self):
         return self.ym.name.str()
 
+    def make_input(self, wire):
+        assert type(wire) is Wire
+        assert wire.yw.module.name == self.ym.name
+        wire.yw.port_input = True
+
+    def make_output(self, wire):
+        assert type(wire) is Wire
+        assert wire.yw.module.name == self.ym.name
+        wire.yw.port_output = True
+
     def add_wire(self, name, width, **synth_attrs):
         if not width:
             return Signal.from_bits([])
@@ -188,10 +198,6 @@ class Module:
                 ymem.set_string_attribute(ys.IdString(f"\\{k}"), v)
             else:
                 raise NotImplementedError(type(v))
-
-    def add_port(self, wire):
-        assert type(wire) is Wire
-        self.ym.ports.append(wire.yw.name)
 
     def _add_cell(self, celltype, *args, **params):
         cell = self.ym.addCell(ys.new_id("", 1, ""),

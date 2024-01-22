@@ -1109,11 +1109,9 @@ class Design:
     def create_clk_rst_ports(self):
         m = self.rtl_module
         self.rtl_clk = m.add_wire("\\clk", 1)
-        self.rtl_clk.yw.port_input = True
-        self.rtl_module.add_port(self.rtl_clk)
+        self.rtl_module.make_input(self.rtl_clk)
         self.rtl_rst = m.add_wire("\\rst", 1)
-        self.rtl_rst.yw.port_input = True
-        self.rtl_module.add_port(self.rtl_rst)
+        self.rtl_module.make_input(self.rtl_rst)
 
     def read_constants(self, nodes):
         for constdecl in nodes:
