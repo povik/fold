@@ -36,8 +36,8 @@ class Hints:
         return matches[0] if len(matches)>0 else None
 
 
-def hint(*name):
-    for m in [Tuple.curr_markers] + Tuple.markers_stack:
+def hint(*name, immediate=False):
+    for m in [Tuple.curr_markers] + ([] if immediate else Tuple.markers_stack):
         if m is not None and m[1] is not None:
             hints = Hints(m[1].hint_text)
             for n in name:
@@ -46,8 +46,8 @@ def hint(*name):
     return None
 
 
-def hint_pre(*name):
-    for m in [Tuple.curr_markers] + Tuple.markers_stack:
+def hint_pre(*name, immediate=False):
+    for m in [Tuple.curr_markers] + ([] if immediate else Tuple.markers_stack):
         if m is not None and m[0] is not None:
             hints = Hints(m[0].hint_text)
             for n in name:

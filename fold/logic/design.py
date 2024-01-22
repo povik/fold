@@ -1343,7 +1343,7 @@ class Design:
         implname = opname
 
         with ast:
-            if hint_pre("per_invocation"):
+            if hint_pre("per_invocation", immediate=True):
                 no = 0
                 while (implname := f"{opname}${no}") in self.funcseqs:
                     no += 1
