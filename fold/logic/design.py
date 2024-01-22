@@ -1363,7 +1363,7 @@ class Design:
         for bi in self.blockimpls:
             bi.build()
 
-        self.rtl_module.ym.design.scratchpad_set_string("immutlinks",
+        self.rtl_module.set_immutlinks_attr(
             format_immutlinks(self.top_frame, self.rtl_module))
 
     @property

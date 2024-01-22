@@ -1,5 +1,6 @@
 # Test timeportal resolution
 read_verilog << EOF
+(* immutlinks = "immutlinks\n" *)
 module top(clk, rst, ai, ao, bi, bo);
   input clk;
   input rst;

@@ -14,15 +14,15 @@
 USING_YOSYS_NAMESPACE;
 
 void Immutlinks::parse(Module *m) {
-	if (m->design->scratchpad_get_string("immutlinks") == "")
-		return;
-	parse(m, m->design->scratchpad_get_string("immutlinks"));
+	if (!m->has_attribute(ID(immutlinks)))
+		log_error("Module '%s' lacks immutlinks attribute.\n", log_id(m));
+	parse(m, m->get_string_attribute(ID(immutlinks)));
 }
 
 void Immutlinks::save(Module *m) {
 	std::stringstream ss;
 	dump(ss);
-	m->design->scratchpad_set_string("immutlinks", ss.str());
+	m->set_string_attribute(ID(immutlinks), ss.str());
 }
 
 bool consume(std::istream &stream, const char *str)

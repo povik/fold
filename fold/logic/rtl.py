@@ -157,6 +157,9 @@ class Module:
         assert wire.yw.module.name == self.ym.name
         wire.yw.port_output = True
 
+    def set_immutlinks_attr(self, value):
+        self.ym.set_string_attribute(ys.IdString("\\immutlinks"), value)
+
     def add_wire(self, name, width, **synth_attrs):
         if not width:
             return Signal.from_bits([])
