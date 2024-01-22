@@ -94,6 +94,10 @@ class Cell:
         else:
             raise NotImplementedError(type(val))
 
+    @property
+    def name(self):
+        return self.yc.name.str()
+
     def append_on_port(self, portname, sig):
         portid = _to_idstring(portname)
         portsig = self.yc.getPort(portid)
@@ -138,6 +142,10 @@ class Module:
         self.used_wires = set()
         self._attr_stack = set()
         self.counter = 0
+
+    @property
+    def name(self):
+        return self.ym.name.str()
 
     def add_wire(self, name, width, **synth_attrs):
         if not width:
