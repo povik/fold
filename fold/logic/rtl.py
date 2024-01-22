@@ -35,7 +35,7 @@ class Design:
         return Design(yd)
 
     def add_module(self, name):
-        return Module(self.yd.addModule(ys.IdString(name)))
+        return Module(self.yd.addModule(ys.IdString(name)), self)
 
     def write_il(self, fn):
         ys.run_pass(f"write_rtlil {fn}", self.yd)
@@ -137,8 +137,9 @@ def _convert_to_const(v):
 
 
 class Module:
-    def __init__(self, ym):
+    def __init__(self, ym, design):
         self.ym = ym
+        self.design = design
         self.used_wires = set()
         self._attr_stack = set()
         self.counter = 0
