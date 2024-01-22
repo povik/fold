@@ -136,6 +136,11 @@ def _convert_to_const(v):
         raise NotImplementedError(type(v))
 
 
+def _make_yconst_str(yc):
+    yc.flags = 1
+    return yc
+
+
 class Module:
     def __init__(self, ym, design):
         self.ym = ym
@@ -175,7 +180,7 @@ class Module:
         self.used_wires.add(name)
         ywire = self.ym.addWire(_to_idstring(name), width)
         ywire.attributes = {
-            ID_FOLDSPEC_SRC: encode_string(foldspec_src).ss.as_const(),
+            ID_FOLDSPEC_SRC: _make_yconst_str(encode_string(foldspec_src).ss.as_const()),
             **{ys.IdString(f"\\{k}"): _convert_to_const(v).ss.as_const() \
                for k, v in synth_attrs.items()}
         }
