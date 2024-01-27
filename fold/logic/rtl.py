@@ -98,6 +98,11 @@ class Cell:
     def name(self):
         return self.yc.name.str()
 
+    @name.setter
+    def name(self, name):
+        assert name.startswith("\\") or name.startswith("$")
+        self.yc.module.rename(self.yc, ys.IdString(name))
+
     def append_on_port(self, portname, sig):
         portid = _to_idstring(portname)
         portsig = self.yc.getPort(portid)
