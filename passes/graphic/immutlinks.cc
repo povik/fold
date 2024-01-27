@@ -791,7 +791,14 @@ Namespace cell_namespace(Cell *cell)
 
 Immutnode *cell_immutnode(Cell *cell, Immutlinks &links, IdString paramname=ID(AT_NODE))
 {
-	return links.lookup_id(IdString(cell->getParam(paramname).decode_string()));
+	IdString id = cell->getParam(paramname).decode_string();
+
+	if (!links.nodes_by_id.count(id)) {
+		log_cell(cell, ">>> ");
+		log_error("No such immutlinks node: %s\n", log_id(id));
+	}
+
+	return links.lookup_id(id);
 }
 
 struct ImmutvarsPass : Pass {
