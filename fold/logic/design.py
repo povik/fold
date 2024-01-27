@@ -1188,33 +1188,34 @@ class Design:
                 function=True)
             if hint_pre("io"):
                 m = self.rtl_module
-                ovalid = m.add_wire(f"\\{name}_ovalid", 1)
-                ovalid.yw.port_output = True
+                with rtl.SynthAttrContext(design_io=True):
+                    ovalid = m.add_wire(f"\\{name}_ovalid", 1)
+                    ivalid = m.add_wire(f"\\{name}_ivalid", 1)
+                    m.make_input(ivalid)
+                    m.make_output(ovalid)
                 entry_bimpl = seq.lookup_label("entry")
                 m.connect(ovalid, entry_bimpl.en) # (1)
                 for argname, shapenode in argsdecl: # (2)
                     shape, mutable = self.eval_shape(shapenode)
-                    argwire = m.add_wire(f"\\{name}_{argname}", shape.bitlen)
-                    argwire.yw.port_output = True
-                    m.add_port(argwire)
+                    with rtl.SynthAttrContext(design_io=True):
+                        argwire = m.add_wire(f"\\{name}_{argname}", shape.bitlen)
+                        m.make_output(argwire)
                     if hint_pre("ahead"):
                         m.connect(argwire, rtl.SEER(m, seq.frame.vars[argname].eval(entry_bimpl)
                                                         .extract_underlying_signal(), 1))
                     else:
                         m.connect(argwire, seq.frame.vars[argname].eval(entry_bimpl)
                                                 .extract_underlying_signal())
-                ivalid = m.add_wire(f"\\{name}_ivalid", 1)
-                ivalid.yw.port_input = True
-                m.add_port(ivalid)
+                
                 seq.frame.vars["_valid"].assign(entry_bimpl, SignalValue(ivalid, Shape(1))) # (3)
 
                 feed_bimpl = seq.lookup_label_in_children("feed")
 
                 for retname, shapenode in retsdecl: # (4)
                     shape, mutable = self.eval_shape(shapenode)
-                    retwire = m.add_wire(f"\\{name}_{retname}", shape.bitlen)
-                    retwire.yw.port_input = True
-                    m.add_port(retwire)
+                    with rtl.SynthAttrContext(design_io=True):
+                        retwire = m.add_wire(f"\\{name}_{retname}", shape.bitlen)
+                        m.make_input(retwire)
                     seq.frame.vars[retname].assign(feed_bimpl, SignalValue(retwire, shape))
             if hint_pre("blackbox"):
                 if body != []:
