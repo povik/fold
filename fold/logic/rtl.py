@@ -226,19 +226,16 @@ class Module:
                 raise NotImplementedError(type(v))
 
     def _add_cell(self, celltype, *args, **params):
-        cell = self.ym.addCell(ys.new_id("", 1, ""),
-                               ys.IdString(celltype))
-        for key, val in params.items():
-            cell.setParam(ys.IdString(f"\\{key}"),
-                          Cell._paramval_const(val))
-
         for i in range(5):
             frame = sys._getframe(i)
             if "rtl.py" not in frame.f_code.co_filename:
                 break
-        foldspec_src = f"{os.path.basename(frame.f_code.co_filename)}:{frame.f_lineno}"
 
-        cell.set_string_attribute(ID_FOLDSPEC_SRC, foldspec_src)
+        cell = self.ym.addCell(ys.new_id(frame.f_code.co_filename, frame.f_lineno, ""),
+                               ys.IdString(celltype))
+        for key, val in params.items():
+            cell.setParam(ys.IdString(f"\\{key}"),
+                          Cell._paramval_const(val))
 
         for k, v in SynthAttrContext.injected_attrs():
             if isinstance(v, bool):
