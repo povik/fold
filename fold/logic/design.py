@@ -50,7 +50,8 @@ class BlockImpl:
         m = self.frame.design.rtl_module
         ei_width = self.frame.design.execid_width
         with rtl.SynthAttrContext(src=self.src):
-            m.connect(self.en, rtl.OR(m, *self.en_sources))
+            en_feed = rtl.OR(m, *self.en_sources)
+            m.connect(self.en, rtl.AND(m, en_feed, rtl.NOT(m, rtl.EQX(m, en_feed, rtl.UNDEF))))
             m.connect(self.execid, rtl.PMUX(m, self.en_sources,
                                             self.execid_sources, width=ei_width))
 
