@@ -1347,7 +1347,8 @@ class Design:
                     no += 1
 
         if implname not in self.funcseqs:
-            self._impl_func(opname, implname)
+            with Tuple.clear_markers():
+                self._impl_func(opname, implname)
         return self.funcseqs[implname]
 
     def do_pass(self, xfrm):

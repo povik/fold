@@ -5,6 +5,7 @@
 import itertools
 import string
 import sys
+from contextlib import contextmanager
 
 
 def markers_str(markers):
@@ -884,6 +885,18 @@ class Tuple:
 
     def __repr__(self):
         return repr(self._a)
+
+    @classmethod
+    @contextmanager
+    def clear_markers(self):
+        save1, save2 = self.markers_stack, self.curr_markers
+        self.markers_stack = []
+        self.curr_markers = None
+        try:
+            yield
+        finally:
+            self.markers_stack = save1
+            self.curr_markers = save2
 
     def __enter__(self):
         type(self).markers_stack.append(type(self).curr_markers)
