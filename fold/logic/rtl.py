@@ -192,6 +192,15 @@ class Module:
             **{ys.IdString(f"\\{k}"): _convert_to_const(v).ss.as_const() \
                for k, v in synth_attrs.items()}
         }
+
+        for k, v in SynthAttrContext.injected_attrs():
+            if isinstance(v, bool):
+                ywire.set_bool_attribute(ys.IdString(f"\\{k}"), v)
+            elif isinstance(v, str):
+                ywire.set_string_attribute(ys.IdString(f"\\{k}"), v)
+            else:
+                raise NotImplementedError(type(v))
+
         return Signal._from_yosys_wire(ywire)
 
     def get_wire(self, name):
