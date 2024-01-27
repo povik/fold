@@ -86,8 +86,6 @@ for 1 {
 	i = memio(pc, undef, undef, 0);
 	pc_sample = pc;
 	pc = pc + 4;
-
-	var opcode [7];
 	opcode = i[6..0];
 
 	print("[%08x] %08x\n", pc_sample, i);
