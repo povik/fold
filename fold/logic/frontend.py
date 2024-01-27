@@ -78,6 +78,7 @@ class FoldFrontend(ys.Frontend):
 
         try:
             d.build()
+            d.rtl_module.set_top()
             d.rtl_module.ym.fixup_ports()
         except BadInput as e:
             print_code_snippet(e.markers)

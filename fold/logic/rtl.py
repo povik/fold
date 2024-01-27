@@ -171,6 +171,9 @@ class Module:
     def set_immutlinks_attr(self, value):
         self.ym.set_string_attribute(ys.IdString("\\immutlinks"), value)
 
+    def set_top(self):
+        self.ym.set_bool_attribute(ys.IdString("\\top"), True)
+
     def add_wire(self, name, width, **synth_attrs):
         if not width:
             return Signal.from_bits([])
