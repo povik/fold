@@ -18,6 +18,8 @@ Some features:
 
 See the [Quick Start](docs/QuickStart.md) document.
 
+Be welcome to join [the Matrix room (hosted on gitter.im)](https://matrix.to/#/#fold:gitter.im) to discuss the project and ask any questions.
+
 ## Setting up the compilers
 
 ### Logic compiler
