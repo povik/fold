@@ -406,8 +406,17 @@ class BlockSeqEval(CombinatorialEvaluator):
                     m = self.bseq.f.design.rtl_module
                     return args[0].sub(m, *args[1:])
 
-                op_bseq, ast = impl_callsite(self.bseq, expr, args, wait=False)
+                if opname.endswith("<-$nonblocking") or opname.endswith("->$nonblocking"):
+                    channame = opname.removesuffix("$nonblocking") \
+                                .removesuffix("->").removesuffix("<-")
+                    if channame not in self.d.channels:
+                        raise BadInput("unknown channel: {:h}", channame)
+                    ret = self.d.channels[channame].exchange_op(opname, self.bseq.curr, args)
+                    if len(ret) > 1:
+                        raise BadInput("too many return values")
+                    return ret[0]
 
+                op_bseq, ast, ret_xform = impl_callsite(self.bseq, expr, args, wait=False)
                 retsdecl = ast[3]
                 if len(retsdecl) != 1:
                     raise BadInput("single return value function required in expression context ({:h} returns {:h} values)",
@@ -749,8 +758,10 @@ class BlockSeq:
             to_curr = self.immutlink(save_curr, self.curr,
                                      transform=FixedOffset(self.d.rtl_module, -delay))
             self.mutlink(save_curr, self.curr, to_curr, hot=rtl.HIGH)
-        elif type(rhs) is Op and (rhs.opname
-                                not in (BASIC_OPS + list(SPECIAL_OPS.keys())) + ["["]):
+        elif type(rhs) is Op \
+                and (rhs.opname not in (BASIC_OPS + list(SPECIAL_OPS.keys())) + ["["]) \
+                and not rhs.opname.endswith("<-$nonblocking") \
+                and not rhs.opname.endswith("->$nonblocking"):
             wait = bool(hint_pre("wait"))
             args = [self.eval(node) for node in rhs.args]
 
@@ -778,6 +789,21 @@ class BlockSeq:
                     continue
                 self.impl_assignment(lhs,
                     bseq.frame.vars[retdecl[0]].eval(bseq.exit if wait else bseq.entry))
+        elif type(rhs) is Op \
+                and (rhs.opname.endswith("<-$nonblocking") or rhs.opname.endswith("->$nonblocking")):
+            channame = rhs.opname.removesuffix("$nonblocking") \
+                        .removesuffix("->").removesuffix("<-")
+            if channame not in self.d.channels:
+                raise BadInput("unknown channel: {:h}", channame)
+            args = [self.eval(node) for node in rhs.args]
+            ret = self.d.channels[channame].exchange_op(rhs.opname, self.curr, args)
+            if len(ret) != len(lhslist):
+                raise BadInput("assignment mismatch, function {:h} returns {} values, given {} sites",
+                                rhs.opname, len(ret), len(lhslist))
+            for lhs, retval in zip(lhslist, ret):
+                if isinstance(lhs, Var) and lhs.varname == "_":
+                    continue
+                self.impl_assignment(lhs, retval)
         else:
             if len(lhslist) > 1:
                 raise BadInput("multiple value assignment of a single value expression result")
@@ -1078,6 +1104,84 @@ def format_immutlinks(top_frame, rtl_module):
     return d
 
 
+class Channel:
+    def __init__(self, design, name, lhsitems, rhsitems, src=""):
+        self.d = design
+        self.name = name
+        self.src = src
+        m = design.rtl_module
+        self.avalid_i = m.add_wire(f"\\{name}_avalid_i", 1)
+        self.avalid_o = m.add_wire(f"\\{name}_avalid_o", 1)
+        self.bvalid_i = m.add_wire(f"\\{name}_bvalid_i", 1)
+        self.bvalid_o = m.add_wire(f"\\{name}_bvalid_o", 1)
+        self.a, self.ay = [self.avalid_i], [self.avalid_o]
+        self.b, self.by = [self.bvalid_i], [self.bvalid_o]
+        self.a_cases = []
+        self.b_cases = []
+        m = self.d.rtl_module
+        self.lhsitems, self.rhsitems = lhsitems, rhsitems
+        for varname, shape in lhsitems:
+            self.a.append(m.add_wire(f"\\{name}_a_{varname}_i", shape.bitlen))
+            self.ay.append(m.add_wire(f"\\{name}_a_{varname}_o", shape.bitlen))
+        for varname, shape in rhsitems:
+            self.b.append(m.add_wire(f"\\{name}_b_{varname}_i", shape.bitlen))
+            self.by.append(m.add_wire(f"\\{name}_b_{varname}_o", shape.bitlen))
+        rtl.TIMEPORTAL(m,
+            rtl.concat(*self.a), rtl.concat(*self.ay),
+            rtl.concat(*self.b), rtl.concat(*self.by)
+        )
+
+    def build(self):
+        m = self.d.rtl_module
+        a_selects = [case[0] for case in self.a_cases]
+        with rtl.SynthAttrContext(src=self.src):
+            clk = self.d.rtl_clk
+            rtl.MUTEX_ASSERT(m, clk, a_selects, f"rightward usage of channel {self.name!s}")
+        m.connect(self.a[0], rtl.OR(m, *a_selects))
+        for i, a in enumerate(self.a[1:]):
+            m.connect(a, rtl.PMUX(m, a_selects,
+                                  [case[i + 1] for case in self.a_cases]))
+        b_selects = [case[0] for case in self.b_cases]
+        with rtl.SynthAttrContext(src=self.src):
+            clk = self.d.rtl_clk
+            rtl.MUTEX_ASSERT(m, clk, b_selects, f"leftward usage of channel {self.name!s}")
+        m.connect(self.b[0], rtl.OR(m, *b_selects))
+        for i, b in enumerate(self.b[1:]):
+            m.connect(b, rtl.PMUX(m, b_selects,
+                                  [case[i + 1] for case in self.b_cases]))
+
+    def exchange_op(self, opname, bi, args):
+        assert opname in [f"{self.name}->$nonblocking", f"{self.name}<-$nonblocking"]
+        leftward = opname == f"{self.name}<-$nonblocking"
+        initems = self.rhsitems if leftward else self.lhsitems
+        outitems = self.lhsitems if leftward else self.rhsitems
+        if len(initems) + 1 != len(args):
+            raise BadInput("bad number of arguments")
+
+        ivalid = args[0].cast(Shape(1)).extract_signal()
+        m = self.d.rtl_module
+        new_case = [rtl.AND(m, ivalid, bi.en)] + [
+            arg.cast(item[1]).extract_underlying_signal()
+            for arg, item in zip(args[1:], initems)
+        ]
+        if leftward:
+            self.b_cases.append(new_case)
+        else:
+            self.a_cases.append(new_case)
+        return [SignalValue(sig, shape) for shape, sig in zip(
+            [Shape(1)] + [shape for name, shape in outitems],
+            self.ay if leftward else self.by
+        )]
+
+    @classmethod
+    def from_ast(self, design, ast):
+        with ast as (_1, name, lhsdecl, rhsdecl):
+            return Channel(design, name,
+                [(varname, design.eval_shape(shapenode)[0]) for varname, shapenode in lhsdecl],
+                [(varname, design.eval_shape(shapenode)[0]) for varname, shapenode in rhsdecl],
+                markers_str(Tuple.curr_markers)
+            )
+
 def fixup_goto_imprints(self):
     common = Frame.common_parent(self.tail.f, self.head.f)
     level = len(list(common.stack))
@@ -1102,6 +1206,7 @@ class Design:
         self.create_clk_rst_ports()
         self.execid_width = 128
         self._ids_counter = 0
+        self.channels = {}
 
     def make_up_id(self):
         self._ids_counter += 1
@@ -1246,57 +1351,11 @@ class Design:
             raise BadInput("channels can only be declared in the top scope")
         m = self.rtl_module
         with ast as (_1, name, lhsdecl, rhsdecl):
-            avalid_i = m.add_wire(f"\\{name}_avalid_i", 1)
-            avalid_o = m.add_wire(f"\\{name}_avalid_o", 1)
-            bvalid_i = m.add_wire(f"\\{name}_bvalid_i", 1)
-            bvalid_o = m.add_wire(f"\\{name}_bvalid_o", 1)
-            a = [avalid_i]
-            ay = [avalid_o]
-            b = [bvalid_i]
-            by = [bvalid_o]
-            for varname, shapenode in lhsdecl:
-                shape, mutable = self.eval_shape(shapenode)
-                a.append(m.add_wire(f"\\{name}_a_{varname}_i", shape.bitlen))
-                ay.append(m.add_wire(f"\\{name}_a_{varname}_o", shape.bitlen))
-            for varname, shapenode in rhsdecl:
-                shape, mutable = self.eval_shape(shapenode)
-                b.append(m.add_wire(f"\\{name}_b_{varname}_i", shape.bitlen))
-                by.append(m.add_wire(f"\\{name}_b_{varname}_o", shape.bitlen))
-            rtl.TIMEPORTAL(m,
-                rtl.concat(*a), rtl.concat(*ay),
-                rtl.concat(*b), rtl.concat(*by)
-            )
-            for opname, leftward in zip([f"{name}->$nonblocking",
-                                         f"{name}<-$nonblocking"], [False, True]):
-                opast = Tuple("func", opname, 
-                    [Tuple("%ivalid", Tuple([Const(1)], False, False))] + (rhsdecl if leftward else lhsdecl),
-                    [Tuple("%ovalid", Tuple([Const(1)], False, False))] + (lhsdecl if leftward else rhsdecl),
-                    []
-                )
-                self._function_asts[opname] = (frame, opast)
-                seq = BlockSeq.from_ast_body(self, [], injectvars=opast[2] + opast[3],
-                                             framename=opname, function=True,
-                                             parent_frame=self.top_frame)
-                seq.entry._label = opname
-                i, o = (a, by) if not leftward else (b, ay)
-                for sig, arg in zip(i, opast[2]):
-                    argname, shapenode = arg
-                    shape, mutable = self.eval_shape(shapenode)
-                    val = seq.frame.vars[argname].eval(seq.entry)
-                    if argname == "%ivalid":
-                        m.connect(sig, rtl.AND(m, seq.entry.en, val.extract_signal()))
-                    else:
-                        m.connect(sig, val.extract_underlying_signal())
-                for sig, ret in zip(o, opast[3]):
-                    retname, shapenode = ret
-                    shape, mutable = self.eval_shape(shapenode)
-                    seq.frame.vars[retname].assign(seq.entry, SignalValue(sig, shape))
-                self.funcseqs[opname] = seq
+            self.channels[name] = Channel.from_ast(self, ast)
             for opname, leftward in zip([f"{name}->",
                                          f"{name}<-"], [False, True]):
                 argsdecl = rhsdecl if leftward else lhsdecl
                 retsdecl = lhsdecl if leftward else rhsdecl
-
                 argvars = []
                 for varname, shapenode in argsdecl:
                     shape, mutable = self.eval_shape(shapenode)
@@ -1365,6 +1424,8 @@ class Design:
             f.build()
         for bi in self.blockimpls:
             bi.build()
+        for ch in self.channels.values():
+            ch.build()
 
         self.rtl_module.set_immutlinks_attr(
             format_immutlinks(self.top_frame, self.rtl_module))
