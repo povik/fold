@@ -262,32 +262,34 @@ void reachablity(CellTypes &ct, Module *m, bool write_attrs, bool connect_const)
 			if (!did_something)
 				continue;
 
-			log_debug("%s\t%s:\t", log_id(cell->type), log_id(cell->name));
-			for (auto &conn : cell->connections()) {
-				std::string str;
-				for (auto bit : sigmap(conn.second)) {
-					switch (state[bit].convert()) {
-					case State::S0:
-						str += "0";
-						break;
-					case State::S1:
-						str += "1";
-						break;
-					case State::Sx:
-						str += "x";
-						break;
-					case State::Sm:
-						str += "-";
-						break;
-					default:
-						str += " ";
-						break;
+			if (ys_debug()) {
+				log_debug("%s\t%s:\t", log_id(cell->type), log_id(cell->name));
+				for (auto &conn : cell->connections()) {
+					std::string str;
+					for (auto bit : sigmap(conn.second)) {
+						switch (state[bit].convert()) {
+						case State::S0:
+							str += "0";
+							break;
+						case State::S1:
+							str += "1";
+							break;
+						case State::Sx:
+							str += "x";
+							break;
+						case State::Sm:
+							str += "-";
+							break;
+						default:
+							str += " ";
+							break;
+						}
 					}
+					std::reverse(str.begin(), str.end());
+					log_debug("%s=%s ", log_id(conn.first), str.c_str());
 				}
-				std::reverse(str.begin(), str.end());
-				log_debug("%s=%s ", log_id(conn.first), str.c_str());
+				log_debug("\n");
 			}
-			log_debug("\n");
 
 			did_something_any_cell = true;
 			if (write_attrs)
