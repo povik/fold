@@ -459,7 +459,7 @@ struct ModuleBuilder {
 			m->connect(y, a_filtered);
 			return NULL;
 		}
-		return m->addReduceBool(id, a, y, signed_, src);	
+		return m->addReduceBool(id, a_filtered, y, signed_, src);	
 	}
 
 	Cell *addPmux(IdString id, SigSpec a, SigSpec b, SigSpec s, SigSpec y, std::string src="")
