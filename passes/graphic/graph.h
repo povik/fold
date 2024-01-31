@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "kernel/hashlib.h"
+#include "kernel/sigtools.h"
 #include "kernel/rtlil.h"
 #include "kernel/log.h"
 
@@ -251,6 +252,7 @@ public:
 	void check();
 	void sort_edges();
 	void build_index(Immutnode *root);
+	void cleanup_hots(Yosys::SigMap &sigmap);
 
 	struct SpantreeWalk {
 		Immutlinks &links;

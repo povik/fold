@@ -375,6 +375,22 @@ void Immutlinks::build_index(Immutnode *root)
 	}
 }
 
+void Immutlinks::cleanup_hots(Yosys::SigMap &sigmap)
+{
+	// Indexing will make copies of edges, so make sure we are sequenced
+	// before that.
+	log_assert(!indexed);
+
+	for (auto &pair : edges)
+	for (auto &edge : pair.second)
+	if (sigmap(edge.hot).is_fully_def())
+		edge.hot = sigmap(edge.hot);
+
+	for (auto node : nodes)
+	if (sigmap(node->en).is_fully_def())
+		node->en = sigmap(node->en);
+}
+
 static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data, bool zeroed=false);
 
 struct ModuleBuilder {
@@ -816,9 +832,10 @@ struct ImmutvarsPass : Pass {
 		for (auto m : d->selected_whole_modules_warn()) {
 			log_debug("Visiting module %s.\n", log_id(m->name));
 			Immutlinks links;
-			links.parse(m);
-			links.module = m;
 			SigMap sigmap(m);
+			links.parse(m);
+			links.cleanup_hots(sigmap);
+			links.module = m;
 			InvertMap imap(m, sigmap);
 			links.imap = &imap;
 			dict<std::pair<Namespace, std::string>, std::vector<Cell*>> cells;
@@ -1066,10 +1083,11 @@ struct ImportsPass : Pass {
 		for (auto m : d->selected_modules()) {
 			log_debug("Visiting module %s.\n", log_id(m->name));
 			Immutlinks links;
+			SigMap sigmap(m);
 			links.parse(m);
+			links.cleanup_hots(sigmap);
 			links.index();
 			links.module = m;
-			SigMap sigmap(m);
 			InvertMap imap(m, sigmap);
 			links.imap = &imap;
 
