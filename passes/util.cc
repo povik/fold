@@ -10,6 +10,7 @@
 #include <random>
 
 USING_YOSYS_NAMESPACE
+PRIVATE_NAMESPACE_BEGIN
 
 struct ScriptPrimedPass : Pass {
 	ScriptPrimedPass() : Pass("script'", "execute commands from file, fall to shell on error") {}
@@ -148,3 +149,29 @@ struct ShufflepmuxPass : Pass {
 		}
 	}
 } ShufflepmuxPass;
+
+struct TimespentPass : Pass {
+	TimespentPass() : Pass("timespent", "print spent time statistics") {}
+	void execute(std::vector<std::string> args, RTLIL::Design *d) override
+	{
+		log_header(d, "Executing TIMESPENT pass. (print time statistics)\n");
+
+		size_t argidx;
+		for (argidx = 1; argidx < args.size(); argidx++) {
+			break;
+		}
+		extra_args(args, argidx, d);
+
+		uint64_t sum = 0;
+
+		for (auto &it : pass_register)
+		if (it.second->call_counter) {
+			sum += it.second->runtime_ns;
+			log("    %2d  %2.3f  %s\n", it.second->call_counter, ((float) it.second->runtime_ns) / 1e9, it.first.c_str());
+		}
+		log("        -----\n");
+		log("        %2.3f\n", ((float) sum) / 1e9);
+	}
+} TimespentPass;
+
+PRIVATE_NAMESPACE_END

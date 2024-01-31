@@ -81,6 +81,8 @@ def main():
             rtl.ys.run_pass(f"plugin -i {str(pathlib.Path(__file__).resolve().parents[2])}/build/fold.so", rtl_design.yd)
             rtl.ys.run_pass(f"{'debug ' if args.debug else ''}fold_synth" + (" --execid" if args.execid else ""), rtl_design.yd)
         rtl_design.write_il(args.output)
+        if not args.no_synth:
+            rtl.ys.run_pass("timespent", rtl_design.yd)
     except BadInput as e:
         print_code_snippet(e.markers)
         print(e, file=sys.stderr)
