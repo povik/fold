@@ -283,3 +283,36 @@ def __execid(bseq):
 def __frame_execid(bseq):
     s = bseq.frame.frame_execid(bseq.curr)
     return SignalValue(s, Shape(s.width))
+
+
+@register("%set")
+def internal_set(bseq, expr):
+    assert len(expr.args) == 3
+    assert isinstance(expr.args[0], rtl.Signal)
+    assert isinstance(expr.args[1], Shape)
+    signal = expr.args[0]
+    shape = expr.args[1]
+    bseq.d.rtl_module.connect(signal, bseq.eval(expr.args[2]).cast(shape).extract_underlying_signal())
+
+@register("%set_masked")
+def internal_set(bseq, expr):
+    assert len(expr.args) == 3
+    assert isinstance(expr.args[0], rtl.Signal)
+    assert isinstance(expr.args[1], Shape)
+    signal = expr.args[0]
+    shape = expr.args[1]
+    bseq.d.rtl_module.connect(signal,
+        rtl.MUX(bseq.curr.en,
+            rtl.repeat(rtl.LOW, shape.bitlen),
+            bseq.eval(expr.args[2]).cast(shape).extract_underlying_signal()
+        )
+    )
+
+@register("%sample")
+def internal_set(bseq, expr):
+    assert len(expr.args) == 2
+    assert isinstance(expr.args[0], rtl.Signal)
+    assert isinstance(expr.args[1], Shape)
+    signal = expr.args[0]
+    shape = expr.args[1]
+    return SignalValue(signal, shape)
