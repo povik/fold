@@ -13,7 +13,7 @@ main: $(TARGET_PLUGIN_LIB)
 %.o: %.cc
 	@echo "    CXX $@"
 	@# -Wno-deprecated-declarations for std::iterator usage in Yosys headers
-	@$(YOSYS_CONFIG) --exec --cxx --cxxflags -O0 -g -I . -MD \
+	@$(YOSYS_CONFIG) --exec --cxx --cxxflags -O3 -g -I . -MD \
 		-DCONFIG_SUPPORT_ROOT=\"$(SUPPORT_ROOT)\" -c -o $@ $< \
 		-D _XOPEN_SOURCE \
 		-Wno-deprecated-declarations -std=c++17
