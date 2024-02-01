@@ -109,6 +109,7 @@ struct Immutnode : Namespaced {
 	Yosys::IdString id;
 	Yosys::SigSpec en;
 	std::string src;
+	bool remove = false;
 
 	NodeIndex index;
 
@@ -333,5 +334,17 @@ public:
 		return SpantreeWalk{ *this, from->index, to->index };
 	}
 };
+
+static Immutnode *cell_immutnode(Yosys::Cell *cell, Immutlinks &links, Yosys::IdString paramname=ID(AT_NODE))
+{
+	Yosys::IdString id = cell->getParam(paramname).decode_string();
+
+	if (!links.nodes_by_id.count(id)) {
+		Yosys::log_cell(cell, ">>> ");
+		Yosys::log_error("No such immutlinks node: %s\n", Yosys::log_id(id));
+	}
+
+	return links.lookup_id(id);
+}
 
 #endif /* __GRAPHIC_GRAPH_H__ */

@@ -114,11 +114,17 @@ void separator(std::istream &stream, bool required=true)
 
 void dump_bit(std::ostream &stream, SigBit bit)
 {
-	log_assert(bit.wire);
-	stream << bit.wire->name.c_str();
-	if (bit.wire->width != 1)
-		stream << " bitpos " << bit.offset;
-	stream << " end\n";
+	if (bit == State::S0) {
+		stream << " 0\n";
+	} else if (bit == State::S1) {
+		stream << " 1\n";
+	} else {
+		log_assert(bit.wire);
+		stream << bit.wire->name.c_str();
+		if (bit.wire->width != 1)
+			stream << " bitpos " << bit.offset;
+		stream << " end\n";
+	}
 }
 
 void dump_str(std::ostream &stream, std::string str)
@@ -187,17 +193,23 @@ void Immutlinks::dump_edge(std::ostream &stream, const Immutedge &edge)
 void Immutlinks::dump(std::ostream &stream) {
 	stream << "immutlinks\n";
 	for (auto node : nodes) {
-		dump_node(stream, node);
+		if (!node->remove)
+			dump_node(stream, node);
 	}
 	for (auto pair : edges)
 	for (auto edge : pair.second) {
-		if (!edge.dir)
+		if (!edge.dir || edge.from->remove || edge.to->remove)
 			continue;
 		dump_edge(stream, edge);
 	}
 }
 
 SigBit parse_bit(Module *m, std::istream &stream) {
+	if (consume(stream, "0")) {
+		return State::S0;
+	} else if (consume(stream, "1")) {
+		return State::S1;
+	}
 	Wire *w = m->wire(parse_id(stream));
 	log_assert(w);
 	separator(stream);
@@ -800,18 +812,6 @@ Namespace cell_namespace(Cell *cell)
 	while (getline(stream, piece, ' '))
 		ret.push_back(IdString(piece));
 	return ret;
-}
-
-Immutnode *cell_immutnode(Cell *cell, Immutlinks &links, IdString paramname=ID(AT_NODE))
-{
-	IdString id = cell->getParam(paramname).decode_string();
-
-	if (!links.nodes_by_id.count(id)) {
-		log_cell(cell, ">>> ");
-		log_error("No such immutlinks node: %s\n", log_id(id));
-	}
-
-	return links.lookup_id(id);
 }
 
 struct ImmutvarsPass : Pass {

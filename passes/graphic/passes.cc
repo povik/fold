@@ -59,6 +59,66 @@ struct ImmutlinksPass : Pass {
 	}
 } ImmutlinksPass;
 
+struct ImmutlinksCleanPass : Pass {
+	ImmutlinksCleanPass() : Pass("immutlinks_clean", "clean the immutlinks graph") {}
+	void execute(std::vector<std::string> args, RTLIL::Design *d) override
+	{
+		log_header(d, "Executing IMMUTLINKS_CLEAN pass. (clean immutlinks graph)\n");
+
+		size_t argidx;
+		for (argidx = 1; argidx < args.size(); argidx++) {
+			break;
+		}
+		extra_args(args, argidx, d);
+
+		for (auto m : d->selected_modules()) {
+			log("Visiting module %s.\n", log_id(m->name));
+			SigMap sigmap(m);
+			Immutlinks links;
+			links.parse(m);
+			links.cleanup_hots(sigmap);
+
+			::hashlib::pool<Immutnode *> queue;
+			for (auto cell : m->cells()) {
+				if (cell->type.in(ID(VAR_SET), ID(VAR_GET))) {
+					queue.insert(cell_immutnode(cell, links));
+				} else if (cell->type == ID(IMPORT)) {
+					queue.insert(cell_immutnode(cell, links, ID(FROM_NODE)));
+					queue.insert(cell_immutnode(cell, links, ID(TO_NODE)));
+				}
+			}
+
+			for (auto &pair : links.edges)
+			for (auto &edge : pair.second) {
+				if (!edge.dir || edge.in_spantree || edge.phantom_threshold)
+					continue;
+				queue.insert(edge.from);
+				queue.insert(edge.to);
+			}
+
+			::hashlib::pool<Immutnode *> used;
+			while (!queue.empty()) {
+				Immutnode *head = queue.pop();
+				used.insert(head);
+				for (auto &edge : links.edges[head])
+				if (!edge.dir && !used.count(edge.to) && edge.hot != State::S0 && edge.to->en != State::S0)
+					queue.insert(edge.to);
+			}
+
+			int nunused = 0;
+			for (auto node : links.nodes)
+			if (!used.count(node)) {
+				log_debug("\tfound unused node: %s\n", log_id(node->id));
+				nunused++;
+				node->remove = true;
+			}
+			log("Cleaned up %d unused nodes.\n", nunused);
+			links.save(m);
+		}
+	}
+} ImmutlinksCleanPass;
+
+
 struct ImselectPass : Pass {
 	ImselectPass() : Pass("imselect", "select immutlinks control signals") {}
 	void execute(std::vector<std::string> args, RTLIL::Design *d) override
@@ -79,10 +139,12 @@ struct ImselectPass : Pass {
 
 			SigSpec hots;
 			for (auto node : links.nodes) {
-				log_assert(node->en.is_wire());
-				sel.select(m, node->en.as_wire());
+				if (!node->en.is_fully_const()) {
+					log_assert(node->en.is_wire());
+					sel.select(m, node->en.as_wire());
+				}
 				for (auto const &edge : links.edges[node])
-				if (edge.dir && edge.hot != SigBit(State::S1)) {
+				if (edge.dir && !edge.hot.is_fully_const()) {
 					log_assert(edge.hot.is_wire());
 					sel.select(m, edge.hot.as_wire());
 				}
