@@ -108,7 +108,6 @@ struct Namespaced {
 struct Immutnode : Namespaced {
 	Yosys::IdString id;
 	Yosys::SigSpec en;
-	bool root = false; // TODO: remove if unused
 	std::string src;
 
 	NodeIndex index;

@@ -144,7 +144,6 @@ void Immutlinks::dump_node(std::ostream &stream, const Immutnode *node)
 	}
 	stream << "    en ";
 	dump_bit(stream, node->en);
-	if (node->root) stream << "  root\n";
 	if (node->index.first) {
 		stream << "    # index " << node->index.first->id.c_str();
 		for (auto i : node->index.second)
@@ -237,8 +236,6 @@ void Immutlinks::parse(Module *m, std::string content) {
 				} else if (consume(stream, "en")) {
 					separator(stream);
 					n->en = parse_bit(m, stream);
-				} else if (consume(stream, "root")) {
-					n->root = true;
 				} else if (consume(stream, "src")) {
 					separator(stream);
 					n->src = parse_string(stream);
