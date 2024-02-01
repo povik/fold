@@ -200,7 +200,9 @@ struct timetravel_module {
 		: m(m), sigmap(sigmap), ct(ct), mask_undef_mux(mask_undef_mux)
 	{
 		for (auto cell : m->cells()) {
-			if (!cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
+			if (cell->type.in(ID($meminit), ID($meminit_v2))) {
+				/* ignore */
+			} else if (!cell->type.in(ID(TIMEPORTAL), ID(BACKEDGE))) {
 				register_node(timetravel_node(cell));
 			} else {
 				for (auto bank : { ID::A, ID::B })
