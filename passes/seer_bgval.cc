@@ -225,7 +225,7 @@ struct SeerSpreadbg : Pass {
 	SeerSpreadbg() : Pass("seer_spreadbg", "spread background value around the circuit") {}
 	void execute(std::vector<std::string> args, RTLIL::Design *d) override
 	{
-		log_header(d, "Executing SEER_SPREAD_BGVAL pass. (spread background values)\n");
+		log_header(d, "Executing SEER_SPREADBG pass. (spread background values)\n");
 
 		bool assert_consistence = false;
 		bool writeback = false;
