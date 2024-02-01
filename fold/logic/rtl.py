@@ -292,7 +292,7 @@ class Module:
         else:
             result_width = cell.getParam(ID_Y_WIDTH).as_int(False)
 
-        ret = self.add_wire(ys.new_id("", 1, "").str(), result_width)
+        ret = self.add_wire(cell.name.str() + "_Y", result_width)
         cell.setPort(ys.IdString("\\Y"), ret.ss)
         cell.fixup_parameters(False, False)
         cell.check()
