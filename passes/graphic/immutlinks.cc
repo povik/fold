@@ -983,19 +983,21 @@ class ImportTree {
 	Immutlinks &links;
 	int width;
 	std::string varname;
+	Namespace ns;
 
 	::hashlib::dict<Immutnode *, ImportNode *> import_nodes;
 	::hashlib::dict<Immutnode *, Immutnode *> implemented_roots;
 
 	void populate(Immutnode *node)
 	{
+		log_assert(node->in_namespace(ns));
 		if (!import_nodes.count(node))
 			import_nodes[node] = new ImportNode(links, node, width, varname);
 	}
 
 public:
-	ImportTree(Immutlinks &links, int width, std::string varname)
-		: links(links), width(width), varname(varname) {};
+	ImportTree(Immutlinks &links, int width, std::string varname, Namespace ns={})
+		: links(links), width(width), varname(varname), ns(ns) {};
 	~ImportTree() {
 		for (auto node : import_nodes)
 			delete node.second;
@@ -1021,6 +1023,8 @@ public:
 	}
 
 	ImportNode *operator[](Immutnode *node) {
+		log_assert(node->in_namespace(ns));
+
 		if (!import_nodes.count(node)) {
 			// Get the root of the tree to which `node` belongs
 			Immutnode *tree_root = node->index.first;
@@ -1041,10 +1045,12 @@ public:
 				log_debug("edge %s %s\n",
 					  edge.from->id.c_str(), edge.to->id.c_str());
 				log_assert(!import_nodes.count(edge.to));
-				populate(edge.from);
-				populate(edge.to);
-				ImportNode::link(import_nodes[edge.from],
-								 import_nodes[edge.to], edge);
+				if (edge.in_namespace(ns)) {
+					populate(edge.from);
+					populate(edge.to);
+					ImportNode::link(import_nodes[edge.from],
+									 import_nodes[edge.to], edge);
+				}
 			}
 
 			log_debug("Linking up node (%s) and new subtree root (%s)\n",
@@ -1054,16 +1060,95 @@ public:
 			for (const auto &edge : links.walk_spantree(node, new_root)) {
 				log_debug("edge %s %s\n",
 					  edge.from->id.c_str(), edge.to->id.c_str());
-				populate(edge.from);
-				populate(edge.to);
-				ImportNode::link(import_nodes[edge.from],
-								 import_nodes[edge.to], edge);
+				if (edge.in_namespace(ns)) {
+					populate(edge.from);
+					populate(edge.to);
+					ImportNode::link(import_nodes[edge.from],
+									 import_nodes[edge.to], edge);
+				}
 			}
+
+			populate(node);
 		}
 
 		return import_nodes.at(node);
 	}
 };
+
+struct Immutvars2Pass : Pass {
+	Immutvars2Pass() : Pass("immutvars2", "implement immutable variables") {}
+	void execute(std::vector<std::string> args, RTLIL::Design *d) override
+	{
+		log_header(d, "Executing IMMUTVARS2 pass.\n");
+
+		size_t argidx;
+		for (argidx = 1; argidx < args.size(); argidx++) {
+			break;
+		}
+		extra_args(args, argidx, d);
+
+		for (auto m : d->selected_whole_modules_warn()) {
+			log_debug("Visiting module %s.\n", log_id(m->name));
+			Immutlinks links;
+			links.parse(m);
+			links.index();
+			links.module = m;
+			SigMap sigmap(m);
+			InvertMap imap(m, sigmap);
+			links.imap = &imap;
+			dict<std::pair<Namespace, std::string>, std::vector<Cell*>> cells;
+
+			for (auto cell : m->cells()) {
+				if (!cell->type.in(ID(VAR_SET), ID(VAR_GET)))
+					continue;
+
+				auto id = std::make_pair(cell_namespace(cell), cell->getParam(ID(NAME)).decode_string());
+				cells[id].push_back(cell);
+			}
+
+			for (auto pair : cells) {
+				Namespace ns;
+				std::string varname;
+				std::tie(ns, varname) = pair.first;
+
+				std::string ns_str = format_namespace(ns);
+				log_debug("Implementing variable '%s' in namespace %s\n", varname.c_str(), ns_str.c_str());
+
+				std::vector<Cell *> &var_cells = pair.second;
+				log_assert(!var_cells.empty());
+				int width = var_cells[0]->getParam(ID::WIDTH).as_int();
+
+				ImportTree *tree = new ImportTree(links, width, varname, ns);
+
+				for (auto cell : var_cells)
+				if (cell->type == ID(VAR_SET)) {
+					Immutnode *node = cell_immutnode(cell, links);
+					log_debug("\tset cell %s at %s\n", log_id(cell->name), log_id(node->id));
+					log_assert(node->in_namespace(ns));
+					(*tree)[node]->inject(cell);
+				}
+
+				for (auto node : links.nodes)
+				if (node->in_namespace(ns))
+				for (auto const &edge : links.edges[node])
+				if (edge.dir && edge.in_namespace(ns) && !edge.in_spantree)
+					ImportNode::link((*tree)[edge.from], (*tree)[edge.to], edge);
+
+				for (auto cell : var_cells)
+				if (cell->type == ID(VAR_GET)) {
+					Immutnode *node = cell_immutnode(cell, links);
+					log_debug("\tget cell %s at %s\n", log_id(cell->name), log_id(node->id));
+					log_assert(node->in_namespace(ns));
+					SigSpec data;
+					std::tie(std::ignore, data) = (*tree)[node]->evaluate();
+					m->connect(cell->getPort(ID::Q), data);
+					m->remove(cell);
+				}
+				tree->build(&imap);
+			}
+		}
+	}
+} Immutvars2Pass;
 
 struct ImportsPass : Pass {
 	ImportsPass() : Pass("imports", "implement imports") {}
