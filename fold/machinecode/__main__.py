@@ -100,6 +100,8 @@ class Value:
         return cast_ir
 
     def recast(self, b, othershape):
+        if othershape == self.shape:
+            return self
         cast_ir = self._cast(b, self.shape, othershape, self.ir)
         return Value(othershape, cast_ir)
 
