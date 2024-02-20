@@ -117,3 +117,7 @@ class Shape:
             ",".join(map(str, self._dims)),
             " signed" if self._signed else ""
         )
+
+    def __eq__(self, other):
+        assert isinstance(other, Shape)
+        return self._dims == other._dims and self._signed == other._signed
