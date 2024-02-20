@@ -416,7 +416,7 @@ class BlockSeqEval(CombinatorialEvaluator):
                         raise BadInput("too many return values")
                     return ret[0]
 
-                op_bseq, ast, ret_xform = impl_callsite(self.bseq, expr, args, wait=False)
+                op_bseq, ast = impl_callsite(self.bseq, expr, args, wait=False)
                 retsdecl = ast[3]
                 if len(retsdecl) != 1:
                     raise BadInput("single return value function required in expression context ({:h} returns {:h} values)",
