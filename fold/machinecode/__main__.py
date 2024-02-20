@@ -752,6 +752,7 @@ class Frame:
 
         with self.builder.goto_block(self.function_parent.alloc_block):
             self.varptrs[var] = self.b.alloca(ir_type(var.shape))
+            self.varptrs[var].name = varname
 
     @property
     @cache
