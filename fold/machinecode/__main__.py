@@ -619,6 +619,10 @@ def impl_callsite(frame, func, argvals, retptrs):
 
     with contextlib.ExitStack() as stack:
         ir_args = []
+
+        if len(argvals) != len(func.args):
+            raise ast.BadInput("bad number of arguments")
+
         for argval, arg in zip(argvals, func.args):
             ir_args.append(
                 stack.enter_context(argval.recast(b, arg.shape) \
