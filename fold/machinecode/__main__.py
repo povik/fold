@@ -975,6 +975,8 @@ class Function:
             func.signature_finalized = True
 
             func.ir_function = ir.Function(d.ir_module, func.llvm_signature, name=name)
+            if parent_frame is not None:
+                func.ir_function.linkage = "private"
             func.alloc_block = func.ir_function.append_basic_block(name="alloc")
             block = func.ir_function.append_basic_block(name="entry")
             frame.builder = builder = ir.IRBuilder(block)
