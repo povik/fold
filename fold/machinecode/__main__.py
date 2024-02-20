@@ -161,14 +161,12 @@ def recurse_on_highdims(f):
 
 
 def check_nargs(args, expected):
-    if len(args) == expected \
-            or (type(expected) in (list, range) and len(args) in expected):
-        return
-
     if type(expected) is int:
-        raise ast.BadInput(f"operation requires {expected} arguments")
-    else:
-        raise ast.BadInput("bad number of arguments to operation")
+        if len(args) != expected:
+            raise ast.BadInput(f"operation requires {expected} arguments")
+        return
+    elif len(args) not in expected:
+        raise ast.BadInput("bad number of arguments to the operation")
 
 
 global_counter = 0
