@@ -128,7 +128,7 @@ def compose_value(b, args):
     predims = set(a.shape.dims[:-1] for a in args)
     if len(predims) > 1:
         shapes_str = ", ".join(str(a.shape) for a in args)
-        raise ast.BadInput("bad shapes for composition: {shapes_str}")
+        raise ast.BadInput(f"bad shapes for composition: {shapes_str}")
 
     element_shape = reduce(Shape.common, [a.shape.element for a in args])
     component_shape = element_shape.prepend_dims(list(predims)[0])
@@ -144,7 +144,7 @@ def recurse_on_highdims(f):
     def wrapper(b, operands, **kwargs):
         if len(set(a.shape.dims[:-1] for a in operands)) != 1:
             shapes_str = ", ".join(str(a.shape) for a in operands)
-            raise ast.BadInput("bad shapes of operands: {shapes_str}")
+            raise ast.BadInput(f"bad shapes of operands: {shapes_str}")
 
         # Recurse on ndims > 1
         if operands[0].shape.ndims > 1:
@@ -276,7 +276,7 @@ def recurse_on_highdims2(f):
     def wrapper(self, arg1, arg2, *operands, **kwargs):
         if len(set(a.shape.dims[:-1] for a in operands)) != 1:
             shapes_str = ", ".join(str(a.shape) for a in operands)
-            raise ast.BadInput("bad shapes of operands: {shapes_str}")
+            raise ast.BadInput(f"bad shapes of operands: {shapes_str}")
 
         # Recurse on ndims > 1
         if operands[0].shape.ndims > 1:
