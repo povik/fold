@@ -60,6 +60,10 @@ class Value:
         self.ir = irval
         self.irptr = irptr
 
+    @classmethod
+    def from_irptr(self, shape, b, irptr):
+        return Value(shape, b.load(irptr), irptr)
+
     @property
     def have_ptr(self):
         return self.irptr is not None
@@ -205,7 +209,7 @@ def read_tsv(b, argvals):
     gconst = ir.GlobalVariable(b.module, ir_type(shape), "yyy%d" % ast.Tuple.curr_markers[0].line)
     gconst.global_constant = True
     gconst.initializer = ir.Constant(ir_type(shape), data)
-    return Value(shape, b.load(gconst))
+    return Value.from_irptr(shape, b, gconst)
 
 
 @register_builtin_op("ctz")
@@ -527,9 +531,9 @@ class ExprEvaluator(baseeval._ExprEvaluator):
                         raise ast.BadInput("bit span syntax a..b not supported on other than final dimension")
                 gep_indices.append(arg.recast(self.b, arg.shape.signed_extend).ir)
                 nindices_done += 1
-            finaldim_val = Value(
+            finaldim_val = Value.from_irptr(
                 base_val.shape.drop_dims(nindices_done),
-                self.b.load(self.b.gep(ptr, gep_indices))
+                self.b, self.b.gep(ptr, gep_indices)
             )
             if nindices_done == len(indices):
                 return finaldim_val
@@ -777,7 +781,7 @@ class Frame:
                 impl_callsite(self, func, argvals, retptrs)
 
                 retvals = [
-                    Value(var.shape, self.b.load(retptr))
+                    Value.from_irptr(var.shape, self.b, retptr)
                     for var, retptr in zip(func.rets, retptrs)
                 ]
 
