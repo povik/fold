@@ -595,9 +595,9 @@ class ExprEvaluator(baseeval._ExprEvaluator):
 
         ret_irtype = ir_type(func.rets[0].shape)
         size = self.frame.d.target_data.get_abi_size(_to_llvm_typeref(ret_irtype))
-        with irhelpers.malloc(self.b, ret_irtype, size) as scratch:
-            impl_callsite(self.frame, func, argvals, [scratch])
-            return Value(func.rets[0].shape, self.b.load(scratch))
+        scratch = self.frame.function_parent.alloca(self.b, ret_irtype)
+        impl_callsite(self.frame, func, argvals, [scratch])
+        return Value.from_irptr(func.rets[0].shape, self.b, scratch)
 
     def on_Special(self, expr):
         return expr.val
@@ -753,10 +753,7 @@ class Frame:
                 raise ast.BadInput("duplicate variable '{:h}' in this scope", varname)
             shape = self.d.eval_shape(shapenode)
             self.vars[varname] = var = VarImpl(self, varname, shape)
-
-        with self.builder.goto_block(self.function_parent.alloc_block):
-            self.varptrs[var] = self.b.alloca(ir_type(var.shape))
-            self.varptrs[var].name = varname
+        self.varptrs[var] = self.function_parent.alloca(self.b, ir_type(var.shape))
 
     @property
     @cache
@@ -776,7 +773,7 @@ class Frame:
                 for ret in func.rets:
                     irtype = ir_type(ret.shape)
                     size = self.d.target_data.get_abi_size(_to_llvm_typeref(irtype))
-                    retptrs.append(stack.enter_context(irhelpers.malloc(self.b, irtype, size)))
+                    retptrs.append(self.function_parent.alloca(self.b, irtype))
 
                 impl_callsite(self, func, argvals, retptrs)
 
@@ -993,6 +990,11 @@ class Function:
             builder.ret_void()
         return func
 
+    def alloca(self, builder, typ):
+        with builder.goto_block(self.alloc_block):
+            ptr = builder.alloca(typ)
+        builder.store(ir.Constant(typ, ir.Undefined), ptr)
+        return ptr
 
 class Program:
     def __init__(self, name, target_machine):
