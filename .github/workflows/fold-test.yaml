@@ -68,6 +68,12 @@ jobs:
           cd fold
           YOSYS_PREFIX=fold- make -j8
 
+      - name: Print machinecode versions
+        shell: bash
+        run: |
+          cd fold
+          python3 -m fold.machinecode -V
+
       - name: Run tests
         shell: bash
         run: |
