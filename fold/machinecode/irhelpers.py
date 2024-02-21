@@ -70,3 +70,29 @@ def recursive_eq(builder, a, b):
         return ret
     else:
         raise NotImplementedError(a.type)
+
+@contextmanager
+def for_range(builder, start, end):
+    typ = ir.IntType(64)
+    assert start in range(-2**63, 2**63)
+    assert end in range(-2**63, 2**63)
+
+    dispatch = builder.append_basic_block()
+    body = builder.append_basic_block()
+    followup_block = builder.append_basic_block()
+
+    entry_block = builder.block
+    builder.branch(dispatch)
+
+    with builder.goto_block(dispatch):
+        itvar = builder.phi(typ)
+        itvar.add_incoming(ir.Constant(typ, start), entry_block)
+        conditional = builder.icmp_signed("<=", itvar, ir.Constant(typ, end))
+        builder.cbranch(conditional, body, followup_block)
+
+    with builder.goto_block(body):
+        yield itvar
+        itvar.add_incoming(builder.add(itvar, ir.Constant(typ, 1)), builder.block)
+        builder.branch(dispatch)
+
+    builder.position_at_end(followup_block)

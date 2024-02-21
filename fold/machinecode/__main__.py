@@ -109,6 +109,32 @@ class Value:
         cast_ir = self._cast(b, self.shape, othershape, self.ir)
         return Value(othershape, cast_ir)
 
+    @classmethod
+    def _cast2(self, b, shape, othershape, irptr, out_irptr):
+        if shape.dims[:-1] != othershape.dims[:-1]:
+            raise ast.BadInput(f"can't cast shape {shape!r} to {othershape!r}")
+
+        if shape.ndims == 1:
+            b.store(self._cast(b, shape, othershape, b.load(irptr)), out_irptr)
+            return
+
+        with irhelpers.for_range(b, 0, shape.dims[0]) as i:
+            self._cast2(b,
+                shape.drop_dims(1), othershape.drop_dims(1),
+                b.gep(irptr, [ir.Constant(ir.IntType(1), 0), i]),
+                b.gep(out_irptr, [ir.Constant(ir.IntType(1), 0), i])
+            )
+
+    def recast2(self, frame, b, othershape):
+        if othershape == self.shape:
+            return self
+        if not self.have_ptr:
+            return self.recast(b, othershape)
+        out_irptr = frame.function_parent.alloca(b, ir_type(othershape))
+        with self.ir_ptr(b, frame.d.target_data) as irptr:
+            self._cast2(b, self.shape, othershape, irptr, out_irptr)
+        return Value.from_irptr(othershape, b, out_irptr)
+
     @contextmanager
     def ir_ptr(self, b, target_data):
         if self.have_ptr:
@@ -740,12 +766,28 @@ class Frame:
         except KeyError:
             raise ast.BadInput("no such variable: {:h}", lhs.varname)
 
-        with self.var_ptr(var, write=True) as ptr:
-            gep_indices = [ir.Constant(ir.IntType(1), 0)] + [
+        with self.var_ptr(var, write=True) as lhs_ptr:
+            lhs_indices = [ir.Constant(ir.IntType(1), 0)] + [
                 a.recast(self.b, a.shape.signed_extend).ir for a in addrs
             ]
-            ptr_subbed = self.b.gep(ptr, gep_indices)
-            self.b.store(val.recast(self.b, var.shape.drop_dims(len(addrs))).ir, ptr_subbed)
+            lhs_subbed = self.b.gep(lhs_ptr, lhs_indices)
+
+            rhs_cast = val.recast2(self, self.b, var.shape.drop_dims(len(addrs)))
+            if rhs_cast.have_ptr:
+                int8 = ir.IntType(8)
+                int8ptr = int8.as_pointer()
+                int64 = ir.IntType(64)
+                memcpy = self.d.ir_module.declare_intrinsic('llvm.memcpy', [int8ptr, int8ptr, int64])
+                size = self.d.target_data.get_abi_size(_to_llvm_typeref(rhs_cast.ir.type))
+                with rhs_cast.ir_ptr(self.b, self.d.target_data) as rhs_ptr:
+                    self.b.call(memcpy, [
+                        self.b.bitcast(lhs_subbed, int8ptr),
+                        self.b.bitcast(rhs_ptr, int8ptr),
+                        ir.Constant(int64, size),
+                        ir.Constant(ir.IntType(1), 0)
+                    ])
+            else:
+                self.b.store(rhs_cast.ir, lhs_subbed)
 
     def impl_var(self, vardecl):
         with vardecl as (varname, shapenode):
