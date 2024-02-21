@@ -855,6 +855,8 @@ class Frame:
                     self.labels[label] = builder.append_basic_block(label)
 
         for stat in ast_body:
+            self.builder.comment(ast.markers_str(stat.markers))
+
             if stat[0] == "label":
                 with stat as (_, label):
                     block = self.labels[label]
