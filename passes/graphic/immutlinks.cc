@@ -400,7 +400,8 @@ void Immutlinks::cleanup_hots(Yosys::SigMap &sigmap)
 		node->en = sigmap(node->en);
 }
 
-static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data, bool zeroed=false);
+static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data,
+						 std::string varname, bool zeroed=false);
 
 struct ModuleBuilder {
 	Module *m;
@@ -555,7 +556,7 @@ struct ImportNode {
 	std::string src;
 	int width;
 
-	ImportNode(Immutlinks &links, Immutnode *image, int width, std::string varname="unk")
+	ImportNode(Immutlinks &links, Immutnode *image, int width, std::string varname)
 		: links(links), image(image), varname(varname), width(width), injects(),
 			local_links(), import_data(), import_valid()
 	{
@@ -642,13 +643,13 @@ struct ImportNode {
 					if (inward.dir)
 						S.append(transform(links, inward, 
 							mb.LogicAnd(NEW_ID, import_valid.at(inward), inward.hot, false, src),
-						true));
+						varname, true));
 					else
 						S.append(mb.LogicAnd(NEW_ID,
-							transform(links, inward, import_valid.at(inward), true),
+							transform(links, inward, import_valid.at(inward), varname, true),
 							inward.hot, false, src
 						));
-					B.append(transform(links, inward, import_data.at(inward)));
+					B.append(transform(links, inward, import_data.at(inward), varname));
 				}
 				// Now do the injects
 				bool assigned = false;
@@ -682,10 +683,10 @@ struct ImportNode {
 						continue;
 					auto inward = outward2.reversed();
 					S.append(mb.LogicAnd(NEW_ID,
-						transform(links, inward, import_valid.at(inward), true),
+						transform(links, inward, import_valid.at(inward), varname, true),
 						inward.hot, false, src
 					));
-					B.append(transform(links, inward, import_data.at(inward)));
+					B.append(transform(links, inward, import_data.at(inward), varname));
 				}
 				// Now do the injects
 				bool assigned = false;
@@ -724,13 +725,13 @@ struct ImportNode {
 				S.append(transform(links, inward, mb.LogicAnd(NEW_ID,
 					import_valid[inward],
 					inward.hot),
-				true));
+				varname, true));
 			else
 				S.append(mb.LogicAnd(NEW_ID,
-					transform(links, inward, import_valid[inward], true),
+					transform(links, inward, import_valid[inward], varname, true),
 					inward.hot, false, src
 				));
-			B.append(transform(links, inward, import_data.at(inward)));
+			B.append(transform(links, inward, import_data.at(inward), varname));
 		}
 		for (auto pair : injects) {
 			S.append(mb.LogicAnd(NEW_ID, pair.first, image->en, false, src));
@@ -756,7 +757,8 @@ struct ImportNode {
 	}
 };
 
-static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data, bool zeroed)
+static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data,
+						 std::string varname, bool zeroed)
 {
 	Module *m = links.module;
 
@@ -779,7 +781,7 @@ static SigSpec transform(Immutlinks &links, const Immutedge &edge, SigSpec data,
 		::hashlib::dict<Immutnode*, ImportNode*> import_nodes;
 		for (auto node : links.nodes)
 		if (node->in_namespace(ns))
-			import_nodes[node] = new ImportNode(links, node, data.size());
+			import_nodes[node] = new ImportNode(links, node, data.size(), varname);
 
 		for (auto node : links.nodes)
 		if (node->in_namespace(ns))
