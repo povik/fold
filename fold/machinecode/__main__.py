@@ -53,7 +53,7 @@ def main():
               file=sys.stderr)
         sys.exit(1)
     except ast.BadInput as e:
-        ast.print_code_snippet(e.markers)
+        ast.print_code_snippet(sys.stderr, e.markers)
         print(e, file=sys.stderr)
         sys.exit(1)
 
@@ -68,7 +68,7 @@ def main():
         d.read_constants(filter_nodes("const"))
         d.impl_top_body(top_ast_nodes)
     except ast.BadInput as e:
-        ast.print_code_snippet(e.markers)
+        ast.print_code_snippet(sys.stderr, e.markers)
         print(e, file=sys.stderr)
         sys.exit(1)
 

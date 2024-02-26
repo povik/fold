@@ -270,7 +270,7 @@ if __name__ == "__main__":
               file=sys.stderr)
         sys.exit(1)
     except ast.BadInput as e:
-        ast.print_code_snippet(e.markers)
+        ast.print_code_snippet(sys.stderr, e.markers)
         print(e, file=sys.stderr)
         sys.exit(1)
 
@@ -287,6 +287,6 @@ if __name__ == "__main__":
                 if eval_(lhs) != eval_(rhs):
                     raise ast.BadInput("failed assertion")
     except ast.BadInput as e:
-        ast.print_code_snippet(e.markers)
+        ast.print_code_snippet(sys.stderr, e.markers)
         print(e, file=sys.stderr)
         sys.exit(1)

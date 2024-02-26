@@ -55,7 +55,7 @@ class FoldFrontend(ys.Frontend):
         try:
             top_ast_nodes = parse_spec_from_buffer(ys.read_istream(f), filename)
         except BadInput as e:
-            print_code_snippet(e.markers)
+            print_code_snippet(sys.stderr, e.markers)
             print(e, file=sys.stderr)
             sys.exit(1)
 
@@ -70,7 +70,7 @@ class FoldFrontend(ys.Frontend):
             d.read_constants(filter_nodes("const"))
             d.impl_top_body(top_ast_nodes)
         except BadInput as e:
-            print_code_snippet(e.markers)
+            print_code_snippet(sys.stderr, e.markers)
             print(e, file=sys.stderr)
             sys.exit(1)
 
@@ -81,7 +81,7 @@ class FoldFrontend(ys.Frontend):
             d.rtl_module.set_top()
             d.rtl_module.ym.fixup_ports()
         except BadInput as e:
-            print_code_snippet(e.markers)
+            print_code_snippet(sys.stderr, e.markers)
             print(e, file=sys.stderr)
             sys.exit(1)
         return

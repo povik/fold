@@ -5,6 +5,7 @@
 import itertools
 import string
 import sys
+import io
 from contextlib import contextmanager
 
 
@@ -28,15 +29,15 @@ def markers_str(markers):
         return "%s:%d:%d" % (a.name, a.line, a.col)
 
 
-def print_line_span(lines, a, b, highlight=False):
+def print_line_span(f, lines, a, b, highlight=False):
     hl = '\033[38;5;126m|\033[0;0m' if highlight else ' '
     for i in range(a - 1, b):
         if i < 0 or i >= len(lines):
             continue
-        print(" \033[2;37m{:4d}\033[0;0m{}{}".format(i + 1, hl, lines[i].rstrip()), file=sys.stderr)
+        print(" \033[2;37m{:4d}\033[0;0m{}{}".format(i + 1, hl, lines[i].rstrip()), file=f)
 
 
-def print_code_snippet(markers):
+def print_code_snippet(f, markers, inject_buffer=None):
     if markers is None or (markers[0] is None and markers[1] is None):
         return
 
@@ -48,34 +49,37 @@ def print_code_snippet(markers):
     if markers[0].name != markers[1].name:
         return
 
-    try:
-        lines = list(open(markers[0].name, 'r'))
-    except FileNotFoundError:
-        return
+    if inject_buffer is None:
+        try:
+            lines = list(open(markers[0].name, 'r'))
+        except FileNotFoundError:
+            return
+    else:
+        lines = list(io.StringIO(inject_buffer))
 
     a, b = markers
 
-    print(file=sys.stderr)
+    print(file=f)
     if a.line != b.line:
-        print_line_span(lines, a.line - 2, a.line - 1)
+        print_line_span(f, lines, a.line - 2, a.line - 1)
         if b.line - a.line >= 8:
-            print_line_span(lines, a.line, a.line + 2, highlight=True)
-            print("      ...", file=sys.stderr)
-            print_line_span(lines, b.line - 2, b.line, highlight=True)
+            print_line_span(f, lines, a.line, a.line + 2, highlight=True)
+            print("      ...", file=f)
+            print_line_span(f, lines, b.line - 2, b.line, highlight=True)
         else:
-            print_line_span(lines, a.line, b.line, highlight=True)
-        print_line_span(lines, b.line + 1, b.line + 2)
+            print_line_span(f, lines, a.line, b.line, highlight=True)
+        print_line_span(f, lines, b.line + 1, b.line + 2)
     else:
         if a.line > len(lines):
             return
-        print_line_span(lines, a.line - 1, a.line)
+        print_line_span(f, lines, a.line - 1, a.line)
         line = lines[a.line - 1]
         print("      " + "".join([" " if (c != "\t") else "\t" for c in line[:a.col-1]])
                   + '\033[38;5;126m'
                   + ("~" * (max(b.col - a.col, 1)))
-                  + '\033[0;0m', file=sys.stderr)
-        print_line_span(lines, a.line + 1, a.line + 1)
-    print(file=sys.stderr)
+                  + '\033[0;0m', file=f)
+        print_line_span(f, lines, a.line + 1, a.line + 1)
+    print(file=f)
 
 
 class _BadInputMessageFmt(string.Formatter):
