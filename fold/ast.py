@@ -112,7 +112,8 @@ prefix_ops = list("!-~")
 postfix_ops = []
 bi_ops_by_precedence = [
     list("."),
-    list("*%") + ["//"],
+    ["**"],
+    list("*%") + ["//", "/"],
     list("+-"),
     [">>", "<<"],
     list("<>") + [">=", "<="],
