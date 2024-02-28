@@ -806,6 +806,25 @@ class Frame:
     def impl_top_expr(self, lhslist, rhs):
         if type(rhs) is ast.Op and rhs.opname == "delay":
             return None
+        if type(rhs) is ast.Op and rhs.opname == "__ir_decl":
+            argvals = [self.eval(arg) for arg in rhs.args]
+            check_nargs(argvals, 1)
+            ir_text = bytes(argvals[0].ir.constant[:-1]).decode("ascii")
+            self.builder.module.globals[ir_text] = ir_text
+            return
+        elif type(rhs) is ast.Op and rhs.opname == "__ir":
+            argvals = [self.eval(arg) for arg in rhs.args]
+            check_nargs(argvals, 1)
+            ir_text = bytes(argvals[0].ir.constant[:-1]).decode("ascii")
+            class CustomInstr(ir.NamedValue):
+                def __init__(self, parent, typ, text):
+                    super().__init__(parent, typ, "")
+                    self.text = text
+                def descr(self, buf):
+                    buf.append(self.text)
+            instr = CustomInstr(self.builder.block, ir.VoidType(), ir_text)
+            self.builder._insert(instr)
+            return
         if type(rhs) is ast.Op and (rhs.opname not in BASIC_OPS) and rhs.opname not in BUILTIN_OPS:
             opname = rhs.opname
             argvals = [self.eval(node) for node in rhs.args]
