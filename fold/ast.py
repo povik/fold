@@ -400,9 +400,12 @@ def tokens(chars, input_name="input"):
     hint_text = ""
 
     def skipover(kind):
+        hit = False
         while inp.peek() is not None \
                 and inp.peek() in kind:
             next(inp)
+            hit = True
+        return hit
 
     def readuntil(kind):
         ret = ""
@@ -411,8 +414,11 @@ def tokens(chars, input_name="input"):
             ret += next(inp)
         return ret
 
+    preceding_ws = False
+    following_ws = False
     while True:
-        skipover(" \t\r\n")
+        if skipover(" \t\r\n"):
+            preceding_ws = True
         if inp.peek() == '#':
             next(inp)
             readuntil("\r\n")
@@ -426,7 +432,10 @@ def tokens(chars, input_name="input"):
 
         start = inp.marker()
         start.hint_text = hint_text
+        start.preceding_ws = preceding_ws
+        start.following_ws = False
         hint_text = ""
+        preceding_ws = False
 
         if inp.peek() is None:
             break
@@ -448,7 +457,9 @@ def tokens(chars, input_name="input"):
             raise BadInput("unexpected character '{:h}'", next(inp),
                            markers=(start, inp.marker()))
 
-        skipover(" \t\r\n")
+        if skipover(" \t\r\n"):
+            preceding_ws = True
+            following_ws = True
         if inp.peek() == '#':
             next(inp)
             readuntil("\r\n")
@@ -459,6 +470,9 @@ def tokens(chars, input_name="input"):
             skipover("\r\n")
 
         end.hint_text = hint_text
+        end.preceding_ws = False
+        end.following_ws = following_ws
+        following_ws = False
         yield (tok, start, end)
 
 
@@ -649,10 +663,11 @@ def parse_expr_part(t):
         return val
 
 
+@mark_positions
 def parse_expr_biop_string(t):
     def finish(stack, atom):
         for s in stack:
-            atom = Op(opname=s[0], args=[s[1], atom])
+            atom = Op(opname=s[1], args=[s[2], atom])
         return atom
 
     # stack is from highest to lowest precedence
@@ -662,7 +677,12 @@ def parse_expr_biop_string(t):
         atom = parse_expr_part(t)
         if not t.consume(is_binary_op):
             return finish(stack, atom)
-        biop = t.last
+        biop = biop_base = t.last
+
+        if t.last_markers[0].preceding_ws \
+                and not t.last_markers[1].following_ws:
+            t.require(is_ident)
+            biop = biop_base + t.last
 
         # if there are unfinished biops with same or higher prec,
         # finish those first then start a new biop
@@ -670,7 +690,7 @@ def parse_expr_biop_string(t):
         atom = finish(higher_prec, atom)
 
         lower_prec = filter(lambda a: _cmp_prec(a[0], biop) < 0, stack)
-        stack = [(biop, atom)] + list(lower_prec)
+        stack = [(biop_base, biop, atom)] + list(lower_prec)
 
 
 @mark_positions
@@ -913,7 +933,15 @@ class Tuple:
 
 
 def parse_func(t):
-    t.require(is_ident); ident = t.last; markers0 = t.last_markers[0]
+    if t.consume(is_binary_op) or t.consume(is_prefix_op):
+        prefix = t.last
+        t.require(is_ident)
+        name = prefix + t.last
+    else:
+        t.require(is_ident)
+        name = t.last
+
+    markers0 = t.last_markers[0]
     args, rets = [], []
 
     if t.consume("("):
@@ -936,7 +964,7 @@ def parse_func(t):
 
     markers1 = t.last_markers[1]
 
-    return Tuple("func", ident, args, rets, stats,
+    return Tuple("func", name, args, rets, stats,
                  markers=(markers0, markers1))
 
 
