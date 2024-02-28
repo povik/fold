@@ -312,6 +312,18 @@ def tokens(chars, input_name="input"):
         opening_marker = inp.marker()
         opening_quote = next(inp)
         assert opening_quote in "'\""
+        if opening_quote == "'" and inp.peek() is not None and inp.peek() == "'":
+            next(inp)
+            if inp.peek() is None or inp.peek() != "'":
+                return "''"
+            next(inp)
+            buffer = ""
+            while len(buffer) < 3 or buffer[-3:] != "'''":
+                if inp.peek() is None:
+                    raise BadInput("missing termination of a triple-quoted literal",
+                                   markers=(opening_marker, inp.marker()))
+                buffer += next(inp)
+            return "'" + buffer[:-3] + "'"
         ret = []
         while inp.peek() is not None \
                 and inp.peek() != opening_quote:
