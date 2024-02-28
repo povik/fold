@@ -796,6 +796,7 @@ class Frame:
             shape = self.d.eval_shape(shapenode)
             self.vars[varname] = var = VarImpl(self, varname, shape)
         self.varptrs[var] = self.function_parent.alloca(self.b, ir_type(var.shape))
+        self.varptrs[var].name = varname
 
     @property
     @cache
@@ -1029,6 +1030,7 @@ class Function:
             with builder.goto_block(func.alloc_block):
                 builder.branch(block)
             for argir, var in zip(func.ir_function.args, func.args + func.vars_closure + func.rets):
+                argir.name = var.varname
                 frame.varptrs[var] = argir
             frame.impl_ast_body(body)
             builder.ret_void()
